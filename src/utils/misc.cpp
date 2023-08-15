@@ -59,6 +59,7 @@ void GH_escapeChar(String* s, char c) {
         case '\\':
             *s += '\\';
             *s += '\\';
+            break;
 
         default:
             *s += c;
