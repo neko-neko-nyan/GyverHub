@@ -2,14 +2,6 @@
 #include "../config.hpp"
 #include "../macro.hpp"
 
-#ifdef GH_ESP_BUILD
-#ifdef GH_NO_MQTT
-class HubMQTT {
-   public:
-    void setupMQTT(const char* host, uint16_t port, const char* login = nullptr, const char* pass = nullptr, uint8_t nqos = 0, bool nret = 0) {}
-};
-#else
-
 #include <Arduino.h>
 #include <AsyncMqttClient.h>
 
@@ -127,5 +119,3 @@ class HubMQTT {
     uint8_t qos = 0;
     bool ret = 0;
 };
-#endif
-#endif

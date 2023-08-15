@@ -50,24 +50,41 @@
 #endif
 #endif
 
-#ifdef GH_ASYNC
-#include "async/http.h"
-#include "async/mqtt.h"
-#include "async/ws.h"
-#else
-#include "sync/http.h"
-#include "sync/mqtt.h"
-#include "sync/ws.h"
 #endif
+
+#if GH_MQTT_IMPL == GH_IMPL_ASYNC
+# include "async/mqtt.h"
+#elif GH_MQTT_IMPL == GH_IMPL_SYNC
+# include "sync/mqtt.h"
+#elif GH_MQTT_IMPL == GH_IMPL_NATIVE
+# include "esp_idf/mqtt.h"
+#elif GH_MQTT_IMPL == GH_IMPL_NONE
+
+class HubMQTT {
+   public:
+    void setupMQTT(const char* host, uint16_t port, const char* login = nullptr, const char* pass = nullptr, uint8_t nqos = 0, bool nret = 0) {}
+};
+
+#endif
+
+
+#if GH_MQTT_IMPL == GH_IMPL_ASYNC
+# include "async/http.h"
+# include "async/ws.h"
+#elif GH_MQTT_IMPL == GH_IMPL_SYNC
+# include "sync/http.h"
+# include "sync/ws.h"
+#elif GH_MQTT_IMPL == GH_IMPL_NATIVE
+# include "esp_idf/http_ws.h"
+#elif GH_MQTT_IMPL == GH_IMPL_NONE
+
+class HubHTTP {};
+class HubWS {};
 
 #endif
 
 // ========================== CLASS ==========================
-#ifdef GH_ESP_BUILD
 class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public HubMQTT, public HubWS {
-#else
-class GyverHub : public HubBuilder, public HubStream {
-#endif
    public:
     // ========================== CONSTRUCT ==========================
 
@@ -97,14 +114,15 @@ class GyverHub : public HubBuilder, public HubStream {
 
     // запустить
     void begin() {
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_WS
+#if GH_HTTP_IMPL != GH_IMPL_NONE
         beginWS();
         beginHTTP();
 #endif
-#ifndef GH_NO_MQTT
+#if GH_MQTT_IMPL != GH_IMPL_NONE
         beginMQTT();
 #endif
+
+#ifdef GH_ESP_BUILD
 #ifndef GH_NO_FS
 #ifdef ESP8266
         fs_mounted = GH_FS.begin();
@@ -119,14 +137,12 @@ class GyverHub : public HubBuilder, public HubStream {
 
     // остановить
     void end() {
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_WS
+#if GH_HTTP_IMPL != GH_IMPL_NONE
         endWS();
         endHTTP();
 #endif
-#ifndef GH_NO_MQTT
+#if GH_MQTT_IMPL != GH_IMPL_NONE
         endMQTT();
-#endif
 #endif
         running_f = false;
         sendEvent(GH_STOP, GH_SYSTEM);
@@ -470,8 +486,7 @@ class GyverHub : public HubBuilder, public HubStream {
     // отправить имя-значение на get-топик (MQTT)
     void sendGet(GH_UNUSED const String& name, GH_UNUSED const String& value) {
         if (!running_f) return;
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_MQTT
+#if GH_MQTT_IMPL != GH_IMPL_NONE
         String topic(prefix);
         topic += F("/hub/");
         topic += id;
@@ -479,13 +494,11 @@ class GyverHub : public HubBuilder, public HubStream {
         topic += name;
         sendMQTT(topic, value);
 #endif
-#endif
     }
 
     // отправить значение по имени компонента на get-топик (MQTT) (значение будет прочитано в build). Имена можно передать списком через запятую
     void sendGet(GH_UNUSED const String& name) {
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_MQTT
+#if GH_MQTT_IMPL != GH_IMPL_NONE
         if (!running_f || !build_cb || bptr) return;
         GHbuild build(GH_BUILD_READ);
         bptr = &build;
@@ -505,7 +518,6 @@ class GyverHub : public HubBuilder, public HubStream {
         }
         bptr = nullptr;
         sptr = nullptr;
-#endif
 #endif
     }
 
@@ -540,7 +552,7 @@ class GyverHub : public HubBuilder, public HubStream {
     }
 
     // парсить строку вида PREFIX/ID/HUB_ID/CMD/NAME с отдельным value
-    void parse(char* url, char* value, GHconn_t from, GHsource_t source) {
+    void parse(char* url, const char* value, GHconn_t from, GHsource_t source) {
         if (!running_f) return;
         if (!modules.read(GH_MOD_SERIAL) && from == GH_SERIAL) return;
         if (!modules.read(GH_MOD_BT) && from == GH_BT) return;
@@ -589,8 +601,7 @@ class GyverHub : public HubBuilder, public HubStream {
         }
 
         if (p.size == 4) {
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_MQTT
+#if GH_MQTT_IMPL != GH_IMPL_NONE
             // MQTT HOOK
             if (from == GH_MQTT && build_cb) {
                 if (!strcmp_P(cmd, PSTR("read"))) {
@@ -610,7 +621,6 @@ class GyverHub : public HubBuilder, public HubStream {
                     return sendEvent(GH_SET_HOOK, from);
                 }
             }
-#endif
 #endif
             setFocus(from);
 
@@ -905,15 +915,15 @@ class GyverHub : public HubBuilder, public HubStream {
 #ifndef GH_NO_STREAM
         tickStream();
 #endif
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_WS
+#if GH_HTTP_IMPL != GH_IMPL_NONE && GH_HTTP_IMPL != GH_IMPL_NATIVE
         tickWS();
         tickHTTP();
 #endif
-#ifndef GH_NO_MQTT
+#if GH_MQTT_IMPL != GH_IMPL_NONE && GH_MQTT_IMPL != GH_IMPL_NATIVE
         tickMQTT();
 #endif
 
+#ifdef GH_ESP_BUILD
 #ifndef GH_NO_FS
         if ((file_d || file_b || file_u || ota_f) && (uint16_t)millis() - fs_tmr >= (GH_CONN_TOUT * 1000)) {
             if (file_d || file_b) fs_state = GH_DOWNLOAD_ABORTED;
@@ -1064,14 +1074,12 @@ class GyverHub : public HubBuilder, public HubStream {
     void _power(FSTR mode) {
         if (!running_f) return;
 
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_MQTT
+#if GH_MQTT_IMPL != GH_IMPL_NONE
         String topic(prefix);
         topic += F("/hub/");
         topic += id;
         topic += F("/status");
         sendMQTT(topic, mode);
-#endif
 #endif
     }
     void _fsmakedir(const char* path) {
@@ -1356,13 +1364,11 @@ class GyverHub : public HubBuilder, public HubStream {
         if (!client_ptr) return;
         switch (client_ptr->source) {
             case GH_ESP:
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_WS
+#if GH_HTTP_IMPL != GH_IMPL_NONE
                 if (client_ptr->from == GH_WS) answerWS(answ);
 #endif
-#ifndef GH_NO_MQTT
+#if GH_MQTT_IMPL != GH_IMPL_NONE
                 if (client_ptr->from == GH_MQTT) answerMQTT(answ, client_ptr->id);
-#endif
 #endif
                 break;
             case GH_MANUAL:
@@ -1390,13 +1396,11 @@ class GyverHub : public HubBuilder, public HubStream {
         if (stateStream() && focus_arr[connStream()]) sendStream(answ);
 #endif
 
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_WS
+#if GH_HTTP_IMPL != GH_IMPL_NONE
         if (focus_arr[GH_WS]) sendWS(answ);
 #endif
-#ifndef GH_NO_MQTT
+#if GH_MQTT_IMPL != GH_IMPL_NONE
         if (focus_arr[GH_MQTT] || broadcast) sendMQTT(answ);
-#endif
 #endif
     }
     void _datasend(String& answ, const String& data) {

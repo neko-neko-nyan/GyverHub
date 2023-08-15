@@ -15,3 +15,29 @@
 #if (defined(ESP8266) || defined(ESP32))
 #define GH_ESP_BUILD
 #endif
+
+
+#define GH_IMPL_NONE 0
+#define GH_IMPL_SYNC 1
+#define GH_IMPL_ASYNC 2
+#define GH_IMPL_NATIVE 3
+
+#ifndef GH_IMPL
+
+#if !defined(GH_ESP_BUILD)
+#define GH_IMPL GH_IMPL_NONE
+#elif defined(GH_ASYNC)
+#define GH_IMPL GH_IMPL_ASYNC
+#else
+#define GH_IMPL GH_IMPL_SYNC
+#endif
+
+#endif // !defined(GH_IMPL)
+
+#ifndef GH_MQTT_IMPL
+#define GH_MQTT_IMPL GH_IMPL
+#endif
+
+#ifndef GH_HTTP_IMPL
+#define GH_HTTP_IMPL GH_IMPL
+#endif

@@ -3,13 +3,6 @@
 #include "../macro.hpp"
 #include "../utils/mime.h"
 
-#ifdef GH_ESP_BUILD
-#ifdef GH_NO_WS
-class HubHTTP {
-   public:
-};
-#else
-
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 
@@ -262,5 +255,3 @@ class HubHTTP {
     DNSServer dns;
 #endif
 };
-#endif
-#endif

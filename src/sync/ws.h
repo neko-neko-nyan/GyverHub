@@ -2,13 +2,6 @@
 #include "../config.hpp"
 #include "../macro.hpp"
 
-#ifdef GH_ESP_BUILD
-#ifdef GH_NO_WS
-class HubWS {
-   public:
-};
-#else
-
 #include <Arduino.h>
 #include <WebSocketsServer.h>
 
@@ -80,5 +73,3 @@ class HubWS {
     WebSocketsServer ws;
     uint8_t clientID = 0;
 };
-#endif
-#endif

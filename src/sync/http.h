@@ -3,13 +3,6 @@
 #include "../macro.hpp"
 #include "../utils/mime.h"
 
-#ifdef GH_ESP_BUILD
-#ifdef GH_NO_WS
-class HubHTTP {
-   public:
-};
-#else
-
 #ifdef ESP8266
 #include <ESP8266WebServer.h>
 #include <ESP8266WiFi.h>
@@ -242,5 +235,3 @@ class HubHTTP {
     DNSServer dns;
 #endif
 };
-#endif
-#endif
