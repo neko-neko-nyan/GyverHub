@@ -38,13 +38,7 @@ class HubWS {
                     parse((char*)data, GH_WS);
                 } break;
 
-                case WStype_BIN:
-                case WStype_FRAGMENT_TEXT_START:
-                case WStype_FRAGMENT_BIN_START:
-                case WStype_FRAGMENT:
-                case WStype_FRAGMENT_FIN:
-                case WStype_PING:
-                case WStype_PONG:
+                default:
                     break;
             }
         });

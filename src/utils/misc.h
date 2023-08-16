@@ -62,7 +62,7 @@ void GH_addEsc(String* s, VSPTR str, bool fstr = 0, char sym = '\"');
 void GH_listDir(String& str, const String& path = "/", char div = ',');
 void GH_showFiles(String& answ, const String& path, GH_UNUSED uint8_t levels = 0, uint16_t* count = nullptr);
 void GH_fileToB64(File& file, String& str);
-void GH_bytesToB64(byte* bytes, uint32_t& idx, uint32_t& size, String& str);
+void GH_bytesToB64(const uint8_t* bytes, uint32_t& idx, uint32_t& size, bool pgm, String& str);
 void GH_B64toFile(File& file, const char* str);
 #endif
 #ifndef GH_NO_OTA

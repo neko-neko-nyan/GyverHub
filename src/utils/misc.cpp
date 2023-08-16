@@ -279,12 +279,13 @@ void GH_fileToB64(File& file, String& str) {
     }
 }
 
-void GH_bytesToB64(byte* bytes, uint32_t& idx, uint32_t& size, String& str) {
+void GH_bytesToB64(const uint8_t* bytes, uint32_t& idx, uint32_t& size, bool pgm, String& str) {
     int16_t len = 0;
     uint16_t slen = 0;
     int val = 0, valb = -6;
     while (idx < size) {
-        val = (val << 8) + bytes[idx++];
+        uint8_t b = pgm ? pgm_read_byte(&bytes[idx++]) : bytes[idx++];
+        val = (val << 8) + b;
         valb += 8;
         while (valb >= 0) {
             str += GH_b64v((val >> valb) & 0x3F);

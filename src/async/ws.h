@@ -40,7 +40,7 @@ class HubWS {
                     }
                 } break;
 
-                case WS_EVT_PONG:
+                default:
                     break;
             }
         });

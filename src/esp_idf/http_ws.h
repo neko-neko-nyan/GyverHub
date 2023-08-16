@@ -10,7 +10,7 @@
 #include "esp_inc/style.h"
 
 #ifndef ESP32
-#error "Native MQTT only available for ESP32"
+#error "Native HTTP only available for ESP32"
 #endif
 
 #include <esp_http_server.h>
@@ -57,31 +57,6 @@ private:
         return httpd_resp_sendstr(req, (const char *) req->user_ctx);
     }
 
-    static const char *getMime(const char *path) {
-        const char *p = strrchr(path, '?');
-        if (p == nullptr) 
-            p = path + strlen(path); // path[9] == \0
-        const char *i = p - 1;
-
-        while (i != path && *i != '.') i--; // path[6] == .
-        if (i == path) return "text/html";
-
-        if (p - i == 3 && i[1] == 'g' && i[2] == 'z') {
-            p = i; // path[6] == .
-            i--;
-            while (i != path && *i != '.') i--; // path[2] == .
-            if (i == path) return "text/html";
-        
-        }
-
-        for (uint16_t n = 0; n < GH_MIME_AMOUNT; n++) {
-            if (strncmp(_GH_mimie_ex_list[n], i, p - i) == 0)
-                return _GH_mimie_list[n];
-        }
-
-        return "text/plain";
-    }
-
     static esp_err_t handlerSendBinData(httpd_req_t *req) {
         String *data = (String*) req->user_ctx;
         
@@ -94,7 +69,10 @@ private:
         res = httpd_resp_set_hdr(req, "Cache-Control", GH_CACHE_PRD);
         if (res != ESP_OK) return res;
 
-        res = httpd_resp_set_type(req, getMime(req->uri));
+        const char *p = strrchr(req->uri, '?');
+        size_t length = p ? p - req->uri : strlen(req->uri);
+
+        res = httpd_resp_set_type(req, GH_getMimeByPath(req->uri, length));
         if (res != ESP_OK) return res;
 
         return httpd_resp_send(req, data->c_str(), data->length());
@@ -111,12 +89,15 @@ private:
 
         res = httpd_resp_set_hdr(req, "Cache-Control", GH_CACHE_PRD);
         if (res != ESP_OK) return res;
-        
-        res = httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
-        if (res != ESP_OK) return res;
 
-        res = httpd_resp_set_type(req, getMime(name));
+        bool gzip;
+        res = httpd_resp_set_type(req, GH_getMimeByPath(name, strlen(name), &gzip));
         if (res != ESP_OK) return res;
+        
+        if (gzip) {
+            res = httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
+            if (res != ESP_OK) return res;
+        }
 
         char *buf = (char*)malloc(SCRATCH_BUFSIZE);
         size_t chunksize;
@@ -155,7 +136,7 @@ private:
         esp_err_t res = setCorsHeaders(req);
         if (res != ESP_OK) return res;
 
-        res = httpd_resp_set_type(req, getMime(file.path()));
+        res = httpd_resp_set_type(req, GH_getMimeByPath(file.path(), strlen(file.path())));
         if (res != ESP_OK) return res;
 
         {
@@ -199,7 +180,7 @@ private:
         }
         Serial.println(filename);
 
-        self->_fsmakedir(filename);
+        self->_fsmkdir(filename);
         File file = GH_FS.open(filename, "w");
         if (!file) {
             free(filename);
@@ -343,7 +324,7 @@ private:
 
 protected:
     virtual void _rebootOTA() = 0;
-    virtual void _fsmakedir(const char* path) = 0;
+    virtual void _fsmkdir(const char* path) = 0;
 
 
 #define GH__SETH(_method, _uri, _handler, _arg) do {                                \
@@ -372,10 +353,10 @@ protected:
         
 
 #ifndef GH_NO_FS
-        GH__SETH(HTTP_GET, "/hub_http_cfg", HubHTTP::handlerSendString, "{\"upload\":" GH_HTTP_UPLOAD ",\"download\":" GH_HTTP_DOWNLOAD ",\"ota\":" GH_HTTP_OTA ",\"path\":\"" GH_HTTP_PATH "\"}");
+        GH__SETH(HTTP_GET, "/hub_http_cfg", HubHTTP::handlerSendString, "{\"upload\":" GH_HTTP_UPLOAD ",\"download\":" GH_HTTP_DOWNLOAD ",\"ota\":" GH_HTTP_OTA ",\"path\":\"" GH_PUBLIC_PATH "\"}");
 
 #ifndef GH_NO_HTTP_DOWNLOAD
-        GH__SETH(HTTP_GET, GH_HTTP_PATH "*", HubHTTP::handlerDownload, this);
+        GH__SETH(HTTP_GET, GH_PUBLIC_PATH "/*", HubHTTP::handlerDownload, this);
 #endif
 
 #ifndef GH_NO_HTTP_UPLOAD
@@ -405,6 +386,10 @@ protected:
 
 
 #undef GH__SETH
+    }
+
+    void answerHTTP(const String &answ) {
+        // TODO
     }
     
     void endHTTP() {

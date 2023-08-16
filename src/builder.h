@@ -192,7 +192,7 @@ class HubBuilder {
         if (_isUI()) {
             _begin(F("log"));
             _name(name, fstr);
-            _text();
+            _value();
             _quot();
             log->read(sptr);
             _quot();
@@ -469,7 +469,8 @@ class HubBuilder {
             _begin(F("gauge"));
             _name(name, fstr);
             _value();
-            *sptr += value;
+            if (isnan(value)) *sptr += 0;
+            else *sptr += value;
             _text(text, fstr);
             _label(label, fstr);
             _minv(minv);
@@ -1172,17 +1173,22 @@ class HubBuilder {
     // ================
     void _minv(float val) {
         _add(F(",\"min\":"));
-        *sptr += val;
+        if (isnan(val)) *sptr += 0;
+        else *sptr += val;
     }
 
     void _maxv(float val) {
         _add(F(",\"max\":"));
-        *sptr += val;
+        if (isnan(val)) *sptr += 0;
+        else *sptr += val;
     }
 
     void _step(float val) {
         _add(F(",\"step\":"));
-        if (val < 0.01) *sptr += String(val, 4);
-        else *sptr += val;
+        if (isnan(val)) *sptr += 0;
+        else {
+            if (val < 0.01) *sptr += String(val, 4);
+            else *sptr += val;
+        }
     }
 };

@@ -32,9 +32,10 @@ FSTR GHreadBuild(GHbuild_t n) {
 GH_PGM(_GH_CON0, "SERIAL");
 GH_PGM(_GH_CON1, "BT");
 GH_PGM(_GH_CON2, "WS");
-GH_PGM(_GH_CON3, "MQTT");
-GH_PGM(_GH_CON4, "SYSTEM");
-GH_PGM_LIST(_GH_con_list, _GH_CON0, _GH_CON1, _GH_CON2, _GH_CON3, _GH_CON4);
+GH_PGM(_GH_CON3, "HTTP");
+GH_PGM(_GH_CON4, "MQTT");
+GH_PGM(_GH_CON5, "SYSTEM");
+GH_PGM_LIST(_GH_con_list, _GH_CON0, _GH_CON1, _GH_CON2, _GH_CON3, _GH_CON4, _GH_CON5);
 FSTR GHreadConn(GHconn_t n) {
 #ifdef GH_ESP_BUILD
         return (FSTR)_GH_con_list[n];

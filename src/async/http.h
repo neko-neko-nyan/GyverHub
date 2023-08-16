@@ -31,14 +31,14 @@
 #endif
 
 #define GH_HTTP_UPLOAD "1"
-#define GH_HTTP_DOWNLOAD "1"
+#define GH_HTTP_FETCH "1"
 #define GH_HTTP_OTA "1"
 
 #ifdef GH_NO_HTTP_UPLOAD
 #define GH_HTTP_UPLOAD "0"
 #endif
-#ifdef GH_NO_HTTP_DOWNLOAD
-#define GH_HTTP_DOWNLOAD "0"
+#ifdef GH_NO_HTTP_FETCH
+#define GH_HTTP_FETCH "0"
 #endif
 #ifdef GH_NO_HTTP_OTA
 #define GH_HTTP_OTA "0"
@@ -61,13 +61,13 @@ class HubHTTP {
 
 #ifndef GH_NO_FS
         server.on("/hub_http_cfg", HTTP_GET, [this](AsyncWebServerRequest* req) {
-            AsyncWebServerResponse* resp = req->beginResponse(200, F("text/plain"), F("{\"upload\":" GH_HTTP_UPLOAD ",\"download\":" GH_HTTP_DOWNLOAD ",\"ota\":" GH_HTTP_OTA ",\"path\":\"" GH_HTTP_PATH "\"}"));
+            AsyncWebServerResponse* resp = req->beginResponse(200, F("text/plain"), F("{\"upload\":" GH_HTTP_UPLOAD ",\"download\":" GH_HTTP_FETCH ",\"ota\":" GH_HTTP_OTA ",\"path\":\"" GH_PUBLIC_PATH "\"}"));
             req->send(resp);
         });
 
-#ifndef GH_NO_HTTP_DOWNLOAD
-        server.on(GH_HTTP_PATH "*", HTTP_GET, [this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse(GH_FS, request->url(), getMime(request->url()));
+#ifndef GH_NO_HTTP_FETCH
+        server.on(GH_PUBLIC_PATH "*", HTTP_GET, [this](AsyncWebServerRequest* request) {
+            AsyncWebServerResponse* response = request->beginResponse(GH_FS, request->url(), GHmime(request->url()));
             request->send(response);
         });
 #endif
@@ -77,7 +77,7 @@ class HubHTTP {
             "/upload", HTTP_POST, [this](AsyncWebServerRequest* request) { request->send(200, F("text/plain"), F("OK")); },
             [this](AsyncWebServerRequest* request, String filename, size_t index, uint8_t* data, size_t len, bool final) {
                 if (!index) {
-                    _fsmakedir(filename.c_str());
+                    _fsmkdir(filename.c_str());
                     file = GH_FS.open(filename, "w");
                     if (!file) {
                         AsyncWebServerResponse* resp = request->beginResponse(500, F("text/plain"), F("FAIL"));
@@ -214,6 +214,10 @@ class HubHTTP {
         server.begin();
     }
 
+    void answerHTTP(const String &answ) {
+        // TODO
+    }
+
     void endHTTP() {
         server.end();
 #ifndef GH_NO_DNS
@@ -227,7 +231,7 @@ class HubHTTP {
 
    protected:
     virtual void _rebootOTA() = 0;
-    virtual void _fsmakedir(const char* path) = 0;
+    virtual void _fsmkdir(const char* path) = 0;
 
     // ============ PRIVATE =============
    private:
@@ -241,12 +245,6 @@ class HubHTTP {
     }
     void cache_h(AsyncWebServerResponse* response) {
         response->addHeader(F("Cache-Control"), GH_CACHE_PRD);
-    }
-    String getMime(const String& path) {
-        for (uint16_t i = 0; i < GH_MIME_AMOUNT; i++) {
-            if (path.endsWith(FPSTR(_GH_mimie_ex_list[i]))) return FPSTR(_GH_mimie_list[i]);
-        }
-        return F("text/plain");
     }
     File file;
 

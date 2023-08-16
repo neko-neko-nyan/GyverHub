@@ -28,11 +28,12 @@ enum GHconn_t {
     GH_SERIAL,
     GH_BT,
     GH_WS,
+    GH_HTTP,
     GH_MQTT,
     GH_SYSTEM,
 };
 
-#define GH_CONN_AMOUNT 4
+#define GH_CONN_AMOUNT 5
 
 // системные события
 enum GHevent_t {
@@ -43,15 +44,15 @@ enum GHevent_t {
     GH_FSBR,
     GH_FORMAT,
     GH_REBOOT,
-    GH_DOWNLOAD_CHUNK,
-    GH_DOWNLOAD_ABORTED,
+    GH_FETCH_CHUNK,
+    GH_FETCH_ABORTED,
     
     GH_DATA,
     GH_SET,
     GH_CLI,
     GH_DELETE,
     GH_RENAME,
-    GH_DOWNLOAD,
+    GH_FETCH,
     GH_UPLOAD,
     GH_UPLOAD_CHUNK,
     GH_OTA,
@@ -74,8 +75,8 @@ enum GHevent_t {
     GH_READ_HOOK,
     GH_SET_HOOK,
 
-    GH_DOWNLOAD_ERROR,
-    GH_DOWNLOAD_FINISH,
+    GH_FETCH_ERROR,
+    GH_FETCH_FINISH,
 
     GH_UPLOAD_ERROR,
     GH_UPLOAD_ABORTED,

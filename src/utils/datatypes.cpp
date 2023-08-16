@@ -103,10 +103,12 @@ void GHtypeToStr(String* s, void* var, GHdata_t type) {
             break;
 
         case GH_FLOAT:
-            *s += *(float*)var;
+            if (isnan(*(float*)var)) *s += 0;
+            else *s += *(float*)var;
             break;
         case GH_DOUBLE:
-            *s += *(double*)var;
+            if (isnan(*(double*)var)) *s += 0;
+            else *s += *(double*)var;
             break;
 
         case GH_COLOR:
