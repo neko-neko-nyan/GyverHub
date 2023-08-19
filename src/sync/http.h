@@ -119,7 +119,7 @@ class HubHTTP {
                         return;
                     }
                     sendEvent(GH_UPLOAD, GH_HTTP);
-                    _fsmkdir(path.c_str());
+                    GH_mkdir_pc(path.c_str());
                     file = GH_FS.open(path.c_str(), "w");
                     if (!file) server.send(500);
 
@@ -260,7 +260,6 @@ class HubHTTP {
     virtual void parse(char *url, GHconn_t from) = 0;
     virtual void sendEvent(GHevent_t state, GHconn_t from) = 0;
     virtual void _rebootOTA() = 0;
-    virtual void _fsmkdir(const char *path) = 0;
     virtual bool _reqHook(const char *name, const char *value, GHclient client, GHevent_t event) = 0;
     virtual bool _checkModule(GHmodule_t mod) = 0;
 

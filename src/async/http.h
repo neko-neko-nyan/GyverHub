@@ -77,7 +77,7 @@ class HubHTTP {
             "/upload", HTTP_POST, [this](AsyncWebServerRequest* request) { request->send(200, F("text/plain"), F("OK")); },
             [this](AsyncWebServerRequest* request, String filename, size_t index, uint8_t* data, size_t len, bool final) {
                 if (!index) {
-                    _fsmkdir(filename.c_str());
+                    GH_mkdir_pc(filename.c_str());
                     file = GH_FS.open(filename, "w");
                     if (!file) {
                         AsyncWebServerResponse* resp = request->beginResponse(500, F("text/plain"), F("FAIL"));
@@ -231,7 +231,6 @@ class HubHTTP {
 
    protected:
     virtual void _rebootOTA() = 0;
-    virtual void _fsmkdir(const char* path) = 0;
 
     // ============ PRIVATE =============
    private:

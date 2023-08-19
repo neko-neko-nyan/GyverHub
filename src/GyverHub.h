@@ -748,7 +748,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 #ifndef GH_NO_FS
                 if (modules.read(GH_MOD_DELETE)) {
                     GH_FS.remove(name);
-                    _fsrmdir(name);
+                    GH_rmdir(name);
                     answerFsbr();
                 }
 #else
@@ -819,7 +819,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
             case 15:  // upload
 #ifndef GH_NO_FS
                 if (!file_d && !file_b && !file_u && !ota_f && !fs_buffer && modules.read(GH_MOD_UPLOAD)) {
-                    _fsmkdir(name);
+                    GH_mkdir_pc(name);
                     file_u = GH_FS.open(name, "w");
                     if (file_u) {
                         fs_buffer = (char*)malloc(GH_UPL_CHUNK_SIZE + 10);
@@ -1112,39 +1112,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         sendMQTT(topic, mode);
 #endif
     }
-    void _fsmkdir(const char* path) {
-#ifdef ESP32
-        if (!GH_FS.exists(path)) {
-            if (strchr(path, '/')) {
-                char* pathStr = strdup(path);
-                if (pathStr) {
-                    char* ptr = strchr(pathStr, '/');
-                    while (ptr) {
-                        *ptr = 0;
-                        GH_FS.mkdir(pathStr);
-                        *ptr = '/';
-                        ptr = strchr(ptr + 1, '/');
-                    }
-                }
-                free(pathStr);
-            }
-        }
-#endif
-    }
-    void _fsrmdir(const char* path) {
-#ifdef ESP32
-        char* pathStr = strdup(path);
-        if (pathStr) {
-            char* ptr = strrchr(pathStr, '/');
-            while (ptr) {
-                *ptr = 0;
-                GH_FS.rmdir(pathStr);
-                ptr = strrchr(pathStr, '/');
-            }
-            free(pathStr);
-        }
-#endif
-    }
+
     bool _reqHook(const char* name, const char* value, GHclient client, GHevent_t event) {
         if (req_cb && !req_cb(GHbuild(GH_BUILD_NONE, name, value, client, event))) return 0;  // forbidden
         return 1;

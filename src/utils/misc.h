@@ -64,6 +64,9 @@ void GH_showFiles(String& answ, const String& path, GH_UNUSED uint8_t levels = 0
 void GH_fileToB64(File& file, String& str);
 void GH_bytesToB64(const uint8_t* bytes, uint32_t& idx, uint32_t& size, bool pgm, String& str);
 void GH_B64toFile(File& file, const char* str);
+void GH_mkdir_p(char *path);
+void GH_mkdir_pc(const char *path);
+void GH_rmdir(const char *path);
 #endif
 #ifndef GH_NO_OTA
 void GH_B64toUpdate(const char* str);

@@ -324,6 +324,51 @@ void GH_B64toFile(File& file, const char* str) {
         }
     }
 }
+
+static void mkdir_p(char *path) {
+    char* ptr = strchr(path, '/');
+    while (ptr) {
+        *ptr = 0;
+        GH_FS.mkdir(path);
+        *ptr = '/';
+        ptr = strchr(ptr + 1, '/');
+    }
+}
+
+void GH_mkdir_p(char *path) {
+#ifdef ESP32
+    if (GH_FS.exists(path)) return;
+    mkdir_p(path);
+#endif
+}
+
+void GH_mkdir_pc(const char *path) {
+#ifdef ESP32
+    if (!strchr(path, '/')) return;
+    if (GH_FS.exists(path)) return;
+    
+    char* pathStr = strdup(path);
+    if (!pathStr) return;
+    
+    mkdir_p(pathStr);
+    free(pathStr);
+#endif
+}
+
+void GH_rmdir(const char *path) {
+#ifdef ESP32
+    char* pathStr = strdup(path);
+    if (!pathStr) return;
+
+    char* ptr = strrchr(pathStr, '/');
+    while (ptr) {
+        *ptr = 0;
+        GH_FS.rmdir(pathStr);
+        ptr = strrchr(pathStr, '/');
+    }
+    free(pathStr);
+#endif
+}
 #endif
 
 #ifndef GH_NO_OTA

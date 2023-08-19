@@ -4,6 +4,7 @@
 #include "GyverHub.h"
 #include "utils/stats.h"
 #include "utils/mime.h"
+#include "utils/misc.h"
 
 #include "esp_inc/index.h"
 #include "esp_inc/script.h"
@@ -180,7 +181,7 @@ private:
         }
         Serial.println(filename);
 
-        self->_fsmkdir(filename);
+        GH_mkdir_p(filename);
         File file = GH_FS.open(filename, "w");
         if (!file) {
             free(filename);
@@ -324,7 +325,6 @@ private:
 
 protected:
     virtual void _rebootOTA() = 0;
-    virtual void _fsmkdir(const char* path) = 0;
 
 
 #define GH__SETH(_method, _uri, _handler, _arg) do {                                \
