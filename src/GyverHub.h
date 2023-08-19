@@ -1451,7 +1451,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
     // ========================== ADDER ==========================
     template <typename T>
-    void _jsVal(String& s, FSTR key, T value, bool last = false) {
+    static void _jsVal(String& s, FSTR key, T value, bool last = false) {
         s += '\"';
         s += key;
         s += F("\":");
@@ -1459,7 +1459,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         if (!last) s += ',';
     }
     template <typename T>
-    void _jsStr(String& s, FSTR key, T value, bool last = false) {
+    static void _jsStr(String& s, FSTR key, T value, bool last = false) {
         s += '\"';
         s += key;
         s += F("\":\"");
@@ -1467,7 +1467,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         s += '\"';
         if (!last) s += ',';
     }
-    void _jsStr(String& s, FSTR key, const String& value, bool last = false) {
+    static void _jsStr(String& s, FSTR key, const String& value, bool last = false) {
         s += '\"';
         s += key;
         s += F("\":\"");
@@ -1481,10 +1481,10 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         s += '\"';
         if (!last) s += ',';
     }
-    void _jsBegin(String& s) {
+    static void _jsBegin(String& s) {
         s += F("\n{");
     }
-    void _jsEnd(String& s) {
+    static void _jsEnd(String& s) {
         s += F("}\n");
     }
 
