@@ -108,6 +108,19 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 #else
         ultoa((nid <= 0x100000) ? (nid + 0x100000) : nid, id, HEX);
 #endif
+
+#ifdef GH_NO_FS
+        modules.unset(GH_MOD_FSBR | GH_MOD_FORMAT | GH_MOD_FETCH | GH_MOD_UPLOAD | GH_MOD_OTA | GH_MOD_OTA_URL | GH_MOD_DELETE | GH_MOD_RENAME);
+#endif
+#ifdef GH_NO_OTA
+        modules.unset(GH_MOD_OTA);
+#endif
+#ifdef GH_NO_OTA_URL
+        modules.unset(GH_MOD_OTA_URL);
+#endif
+#ifndef GH_ESP_BUILD
+        modules.unset(GH_MOD_REBOOT | GH_MOD_FSBR | GH_MOD_FORMAT | GH_MOD_FETCH | GH_MOD_UPLOAD | GH_MOD_OTA | GH_MOD_OTA_URL | GH_MOD_DELETE | GH_MOD_RENAME);
+#endif
     }
 
     // ========================== SETUP ==========================
@@ -1363,19 +1376,6 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         _jsStr(answ, F("ota_t"), F("gz"));
 #else
         _jsStr(answ, F("ota_t"), F("bin"));
-#endif
-
-#ifdef GH_NO_FS
-        modules.unset(GH_MOD_FSBR | GH_MOD_FORMAT | GH_MOD_FETCH | GH_MOD_UPLOAD | GH_MOD_OTA | GH_MOD_OTA_URL | GH_MOD_DELETE | GH_MOD_RENAME);
-#endif
-#ifdef GH_NO_OTA
-        modules.unset(GH_MOD_OTA);
-#endif
-#ifdef GH_NO_OTA_URL
-        modules.unset(GH_MOD_OTA_URL);
-#endif
-#ifndef GH_ESP_BUILD
-        modules.unset(GH_MOD_REBOOT | GH_MOD_FSBR | GH_MOD_FORMAT | GH_MOD_FETCH | GH_MOD_UPLOAD | GH_MOD_OTA | GH_MOD_OTA_URL | GH_MOD_DELETE | GH_MOD_RENAME);
 #endif
         _jsVal(answ, F("modules"), modules.mods, true);
         _jsEnd(answ);
