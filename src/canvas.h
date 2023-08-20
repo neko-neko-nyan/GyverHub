@@ -8,6 +8,7 @@
 
 #include "macro.hpp"
 #include "utils/misc.h"
+#include "utils/json.h"
 
 enum GHmode_t {
     CV_BUTT,
@@ -54,7 +55,7 @@ class GHcanvas {
     }
 
     // буфер
-    String buf;
+    GHJson buf;
 
     // подключить внешний буфер
     void extBuffer(String* sptr) {
@@ -64,7 +65,7 @@ class GHcanvas {
     // очистить буфер (внутренний)
     void clearBuffer() {
         first = 1;
-        buf = "";
+        buf.clear();
     }
 
     // добавить строку кода на js
