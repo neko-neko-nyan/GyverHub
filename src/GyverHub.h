@@ -832,13 +832,13 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
             case 16:  // upload_chunk
 #ifndef GH_NO_FS
                 if (file_u && fs_client == client && fs_buffer) {
+                    strcpy(fs_buffer, value);
+
                     if (!strcmp_P(name, PSTR("next"))) {
                         fs_state = GH_UPLOAD_CHUNK;
-                        strcpy(fs_buffer, value);
                         return;
                     } else if (!strcmp_P(name, PSTR("last"))) {
                         fs_state = GH_UPLOAD_FINISH;
-                        strcpy(fs_buffer, value);
                         return;
                     }
                 }
@@ -891,13 +891,13 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
             case 18:  // ota_chunk
 #if !defined(GH_NO_FS) && !defined(GH_NO_OTA)
                 if (ota_f && fs_client == client && fs_buffer) {
+                    strcpy(fs_buffer, value);
+
                     if (!strcmp_P(name, PSTR("next"))) {
                         fs_state = GH_OTA_CHUNK;
-                        strcpy(fs_buffer, value);
                         return;
                     } else if (!strcmp_P(name, PSTR("last"))) {
                         fs_state = GH_OTA_FINISH;
-                        strcpy(fs_buffer, value);
                         return;
                     }
                 }
@@ -905,19 +905,52 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 answerType(F("ota_err"));
                 return sendEvent(GH_OTA_ERROR, from);
 
-            case 19:  // ota_url
-#if !defined(GH_NO_FS) && !defined(GH_NO_OTA) && !defined(GH_NO_OTA_URL)
-                if (!file_d && !file_b && !file_u && !ota_f && !fs_buffer && modules.read(GH_MOD_OTA_URL)) {
-                    if (!strcmp_P(name, PSTR("flash"))) ota_url_fs = 0;
-                    else if (!strcmp_P(name, PSTR("fs"))) ota_url_fs = 1;
-                    ota_url = value;
-                    answerType();
-                    fs_state = GH_OTA_URL;
+            case 19: { // ota_url
+#ifdef GH_NO_OTA_URL
+                answerDsbl();
+                return sendEvent(GH_OTA_URL, from);
+#else
+                if (!modules.read(GH_MOD_OTA_URL)) {
+                    answerDsbl();
                     return sendEvent(GH_OTA_URL, from);
                 }
+
+                bool isFlash = strcmp_P(name, PSTR("flash")) == 0;
+                bool isFs = !isFlash && strcmp_P(name, PSTR("fs")) == 0;
+                if (!isFlash && !isFs) {
+                    answerErr(F("Invalid type"));
+                    return sendEvent(GH_OTA_URL, from);
+                }
+
+                answerType();
+                sendEvent(GH_OTA_URL, from);
+
+                bool ok = 0;
+                ota_url_f = 1;
+#ifdef ESP8266
+                ESPhttpUpdate.rebootOnUpdate(false);
+                BearSSL::WiFiClientSecure client;
+                if (strncmp_P(value, PSTR("https"), 5) == 0) client.setInsecure();
+                if (isFs) ESPhttpUpdate.updateFS(client, value);
+                else ok = ESPhttpUpdate.update(client, value);
+#else
+                httpUpdate.rebootOnUpdate(false);
+                WiFiClientSecure client;
+                if (strncmp_P(value, PSTR("https"), 5) == 0) client.setInsecure();
+                if (isFs) ok = httpUpdate.updateSpiffs(client, value);
+                else ok = httpUpdate.update(client, value);
 #endif
-                answerErr(F("File busy"));
-                return sendEvent(GH_OTA_URL, from);
+                if (ok) {
+                    reboot_f = GH_REB_OTA_URL;
+                    answerType(F("ota_url_ok"));
+                } else {
+                    ota_url_f = 0;
+                    answerType(F("ota_url_err"));
+                }
+
+                return ;
+#endif
+            }
 #endif
         }
     }
@@ -960,35 +993,6 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
         if (fs_state != GH_IDLE) {
             switch (fs_state) {
-#ifndef GH_NO_OTA_URL
-                case GH_OTA_URL: {
-                    bool ok = 0;
-                    ota_url_f = 1;
-#ifdef ESP8266
-                    ESPhttpUpdate.rebootOnUpdate(false);
-                    BearSSL::WiFiClientSecure client;
-                    if (ota_url.startsWith(F("https"))) client.setInsecure();
-                    if (ota_url_fs) ESPhttpUpdate.updateFS(client, ota_url);
-                    else ok = ESPhttpUpdate.update(client, ota_url);
-#else
-                    httpUpdate.rebootOnUpdate(false);
-                    WiFiClientSecure client;
-                    if (ota_url.startsWith(F("https"))) client.setInsecure();
-                    if (ota_url_fs) ok = httpUpdate.updateSpiffs(client, ota_url);
-                    else ok = httpUpdate.update(client, ota_url);
-#endif
-                    client_ptr = &fs_client;
-                    if (ok) {
-                        reboot_f = GH_REB_OTA_URL;
-                        answerType(F("ota_url_ok"));
-                    } else {
-                        ota_url = "";
-                        ota_url_f = 0;
-                        answerType(F("ota_url_err"));
-                    }
-                } break;
-#endif
-
                 case GH_FETCH_ABORTED:
                     if (fetch_cb) fetch_cb(fetch_path, false);
                     if (file_d) file_d.close();
@@ -1482,12 +1486,10 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     bool autoGet_f = 0;
     GHreason_t reboot_f = GH_REB_NONE;
 
-#ifndef GH_NO_FS
 #ifndef GH_NO_OTA_URL
-    String ota_url;
     bool ota_url_f = 0;
-    bool ota_url_fs = 0;
 #endif
+#ifndef GH_NO_FS
     bool fs_mounted = 0;
     GHclient fs_client;
     GHevent_t fs_state = GH_IDLE;
