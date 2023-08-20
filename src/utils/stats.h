@@ -1,12 +1,6 @@
 #pragma once
 #include "../config.hpp"
 
-enum GHsource_t {
-    GH_ESP,
-    GH_MANUAL,
-    GH_STREAM
-};
-
 // тип info
 enum GHinfo_t {
     GH_INFO_VERSION,
@@ -31,6 +25,7 @@ enum GHconn_t {
     GH_HTTP,
     GH_MQTT,
     GH_SYSTEM,
+    GH_MANUAL2,
 };
 
 #define GH_CONN_AMOUNT 5

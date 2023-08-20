@@ -114,7 +114,7 @@ class HubHTTP {
                         server.send(503);
                         return;
                     }
-                    if (!_reqHook(path.c_str(), "", GHclient(GH_HTTP, server.arg(F("client_id")).c_str(), GH_ESP), GH_UPLOAD)) {
+                    if (!_reqHook(path.c_str(), "", GHclient(GH_HTTP, server.arg(F("client_id")).c_str()), GH_UPLOAD)) {
                         server.send(503);
                         return;
                     }
@@ -148,7 +148,7 @@ class HubHTTP {
                         server.send(503);
                         return;
                     }
-                    if (!_reqHook("", "", GHclient(GH_HTTP, server.arg(F("client_id")).c_str(), GH_ESP), GH_OTA)) {
+                    if (!_reqHook("", "", GHclient(GH_HTTP, server.arg(F("client_id")).c_str()), GH_OTA)) {
                         server.send(503);
                         return;
                     }
@@ -284,7 +284,7 @@ class HubHTTP {
             server.send(403);
             return 1;
         }
-        if (!_reqHook(path.c_str(), "", GHclient(GH_HTTP, server.arg(F("client_id")).c_str(), GH_ESP), GH_FETCH)) {
+        if (!_reqHook(path.c_str(), "", GHclient(GH_HTTP, server.arg(F("client_id")).c_str()), GH_FETCH)) {
             server.send(403);
             return 1;
         }

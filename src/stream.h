@@ -16,16 +16,15 @@ class HubStream {
 class HubStream {
    public:
     // подключить Stream для связи
-    void setupStream(Stream* nstream, GHconn_t nfrom) {
+    void setupStream(Stream* nstream) {
         stream = nstream;
-        from = nfrom;
     }
 
    protected:
     void tickStream() {
         if (stream && stream->available()) {
             String str = stream->readStringUntil('\0');
-            parse((char*)str.c_str(), from, GH_STREAM);
+            parse((char*)str.c_str(), GH_SERIAL);
         }
     }
 
@@ -33,18 +32,10 @@ class HubStream {
         if (stream) stream->print(answ);
     }
 
-    bool stateStream() {
-        return stream;
-    }
-    GHconn_t connStream() {
-        return from;
-    }
-
-    virtual void parse(char* url, GHconn_t from, GHsource_t source) = 0;
+    virtual void parse(char* url, GHconn_t from) = 0;
 
     // ============ PRIVATE =============
    private:
     Stream* stream = nullptr;
-    GHconn_t from;
 };
 #endif

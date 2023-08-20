@@ -151,7 +151,7 @@ public:
     }
 
 protected:
-    virtual void parse(char* url, char* value, GHconn_t from) = 0;
+    virtual void parse(char* url, const char* value, GHconn_t from) = 0;
     virtual const char* getPrefix() = 0;
     virtual const char* getID() = 0;
     virtual void sendEvent(GHevent_t state, GHconn_t from) = 0;

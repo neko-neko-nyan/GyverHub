@@ -197,7 +197,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     }
 
     // подключить функцию-обработчик запроса при ручном соединении
-    void onManual(void (*handler)(String& s, GHconn_t from, bool broadcast)) {
+    void onManual(void (*handler)(String& s, bool broadcast)) {
         manual_cb = *handler;
     }
 
@@ -562,25 +562,19 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     }
 
     // ========================== PARSER ==========================
-    void parse(char* url, GHconn_t from) {
-        parse(url, from, GH_ESP);
-    }
-    void parse(char* url, char* value, GHconn_t from) {
-        parse(url, value, from, GH_ESP);
-    }
 
     // парсить строку вида PREFIX/ID/HUB_ID/CMD/NAME=VALUE
-    void parse(char* url, GHconn_t from, GHsource_t source) {
+    void parse(char* url, GHconn_t from) {
         if (!running_f) return;
         char* eq = strchr(url, '=');
         char val[1] = "";
         if (eq) *eq = 0;
-        parse(url, eq ? (eq + 1) : val, from, source);
+        parse(url, eq ? (eq + 1) : val, from);
         if (eq) *eq = '=';
     }
 
     // парсить строку вида PREFIX/ID/HUB_ID/CMD/NAME с отдельным value
-    void parse(char* url, const char* value, GHconn_t from, GHsource_t source) {
+    void parse(char* url, const char* value, GHconn_t from) {
         if (!running_f) return;
 
         if (!modules.read(GH_MOD_SERIAL) && from == GH_SERIAL) return;
@@ -594,7 +588,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 #endif
 
         if (!strcmp(url, prefix)) {  // == prefix
-            GHclient client(from, value, source);
+            GHclient client(from, value);
             client_ptr = &client;
             answerDiscover();
             return sendEvent(GH_DISCOVER_ALL, from);
@@ -605,7 +599,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         if (strcmp(p.str[1], id)) return;      // wrong id
 
         if (p.size == 2) {
-            GHclient client(from, value, source);
+            GHclient client(from, value);
             client_ptr = &client;
             answerDiscover();
             return sendEvent(GH_DISCOVER, from);
@@ -620,7 +614,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
         const char* client_id = p.str[2];
         const char* name = p.str[4];
-        GHclient client(from, client_id, source);
+        GHclient client(from, client_id);
         client_ptr = &client;
 
         if (!_reqHook(name, value, client, (GHevent_t)cmdn)) {
@@ -1381,54 +1375,45 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     // ======================= ANSWER ========================
     void _answer(String& answ, bool close = true) {
         if (!client_ptr) return;
-        switch (client_ptr->source) {
-            case GH_ESP:
 #ifdef GH_ESP_BUILD
-                switch (client_ptr->from) {
+        switch (client_ptr->from) {
 #if GH_HTTP_IMPL != GH_IMPL_NONE
-                    case GH_WS:
-                        answerWS(answ);
-                        break;
+            case GH_WS:
+                answerWS(answ);
+                break;
 #endif
 #if GH_MQTT_IMPL != GH_IMPL_NONE
-                    case GH_MQTT:
-                        answerMQTT(answ, client_ptr->id);
-                        break;
+            case GH_MQTT:
+                answerMQTT(answ, client_ptr->id);
+                break;
 #endif
 #if GH_HTTP_IMPL != GH_IMPL_NONE
-                    case GH_HTTP:
-                        answerHTTP(answ);
-                        break;
+            case GH_HTTP:
+                answerHTTP(answ);
+                break;
 #endif
-                    default:
-                        break;
-                }
+#ifndef GH_NO_STREAM
+            case GH_SERIAL:
+                sendStream(answ);
+                break;
 #endif
-                break;  // case GH_ESP:
-
-            case GH_MANUAL:
-                if (manual_cb) manual_cb(answ, client_ptr->from, false);
+            case GH_MANUAL2:
+                if (manual_cb) manual_cb(answ, false);
                 break;
 
-            case GH_STREAM:
-#ifndef GH_NO_STREAM
-                sendStream(answ);
-#endif
+            default:
                 break;
         }
+#endif
         if (close) client_ptr = nullptr;
     }
 
     // ======================= SEND ========================
     void _send(String& answ, bool broadcast = false) {
-        if (manual_cb) {
-            for (int i = 0; i < GH_CONN_AMOUNT; i++) {
-                manual_cb(answ, (GHconn_t)i, broadcast);
-            }
-        }
+        if (manual_cb) manual_cb(answ, broadcast);
 
 #ifndef GH_NO_STREAM
-        if (stateStream() && focus_arr[connStream()]) sendStream(answ);
+        if (focus_arr[GH_SERIAL]) sendStream(answ);
 #endif
 
 #if GH_HTTP_IMPL != GH_IMPL_NONE
@@ -1470,7 +1455,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     bool (*req_cb)(GHbuild build) = nullptr;
     void (*info_cb)(GHinfo_t info) = nullptr;
     void (*cli_cb)(String& str) = nullptr;
-    void (*manual_cb)(String& s, GHconn_t from, bool broadcast) = nullptr;
+    void (*manual_cb)(String& s, bool broadcast) = nullptr;
     void (*event_cb)(GHevent_t state, GHconn_t from) = nullptr;
     GHclient* client_ptr = nullptr;
 

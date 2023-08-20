@@ -5,10 +5,9 @@
 
 struct GHclient {
     GHclient() {}
-    GHclient(GHconn_t nfrom, const char* nid, GHsource_t nsource = GH_ESP) {
+    GHclient(GHconn_t nfrom, const char* nid) {
         from = nfrom;
         if (strlen(nid) <= 8) strcpy(id, nid);
-        source = nsource;
     }
 
     // тип соединения
@@ -21,9 +20,6 @@ struct GHclient {
     String idString() {
         return id;
     }
-    
-    // источник
-    GHsource_t source;
 
     bool eq(GHclient& client) {
         return (client.from == from && !strcmp(client.id, id));
