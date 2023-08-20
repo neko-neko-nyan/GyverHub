@@ -759,7 +759,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
             case 12:  // fetch
 #ifndef GH_NO_FS
-                if (!file_d && !file_b && !file_u && !ota_f && modules.read(GH_MOD_FETCH)) {
+                if (!file_d && !file_b && !file_u && modules.read(GH_MOD_FETCH)) {
                     fetch_path = name;
                     if (fetch_cb) fetch_cb(fetch_path, true);
                     if (!file_d && !file_b) file_d = GH_FS.open(name, "r");
@@ -811,7 +811,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
             case 15:  // upload
 #ifndef GH_NO_FS
-                if (!file_d && !file_b && !file_u && !ota_f && !fs_buffer && modules.read(GH_MOD_UPLOAD)) {
+                if (!file_d && !file_b && !file_u && !fs_buffer && modules.read(GH_MOD_UPLOAD)) {
                     GH_mkdir_pc(name);
                     file_u = GH_FS.open(name, "w");
                     if (file_u) {
@@ -846,64 +846,92 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 answerType(F("upload_err"));
                 return sendEvent(GH_UPLOAD_ERROR, from);
 
-            case 17:  // ota
-#if !defined(GH_NO_FS) && !defined(GH_NO_OTA)
-                if (!file_d && !file_b && !file_u && !ota_f && !fs_buffer && modules.read(GH_MOD_OTA)) {
-                    int ota_type = 0;
-                    if (!strcmp_P(name, PSTR("flash"))) ota_type = 1;
-                    else if (!strcmp_P(name, PSTR("fs"))) ota_type = 2;
-
-                    if (ota_type) {
-                        size_t ota_size;
-                        if (ota_type == 1) {
-                            ota_type = U_FLASH;
-#ifdef ESP8266
-                            ota_size = (size_t)((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000);
-#else
-                            ota_size = UPDATE_SIZE_UNKNOWN;
-#endif
-                        } else {
-#ifdef ESP8266
-                            ota_type = U_FS;
-                            close_all_fs();
-                            ota_size = (size_t)&_FS_end - (size_t)&_FS_start;
-#else
-                            ota_type = U_SPIFFS;
-                            ota_size = UPDATE_SIZE_UNKNOWN;
-#endif
-                        }
-                        if (Update.begin(ota_size, ota_type)) {
-                            fs_buffer = (char*)malloc(GH_UPL_CHUNK_SIZE + 10);
-                            if (fs_buffer) {
-                                fs_client = client;
-                                ota_f = true;
-                                fs_tmr = millis();
-                                answerType(F("ota_start"));
-                                return sendEvent(GH_OTA, from);
-                            }
-                        }
-                    }
-                }
-#endif
-                answerType(F("ota_err"));
+            case 17: { // ota
+#ifdef GH_NO_OTA
+                answerDsbl();
                 return sendEvent(GH_OTA_ERROR, from);
-
-            case 18:  // ota_chunk
-#if !defined(GH_NO_FS) && !defined(GH_NO_OTA)
-                if (ota_f && fs_client == client && fs_buffer) {
-                    strcpy(fs_buffer, value);
-
-                    if (!strcmp_P(name, PSTR("next"))) {
-                        fs_state = GH_OTA_CHUNK;
-                        return;
-                    } else if (!strcmp_P(name, PSTR("last"))) {
-                        fs_state = GH_OTA_FINISH;
-                        return;
-                    }
+#else
+                if (!modules.read(GH_MOD_OTA)) {
+                    answerDsbl();
+                    return sendEvent(GH_OTA_ERROR, from);
                 }
+
+                if (ota_f) {
+                    answerErr(F("Update already running"));
+                    return sendEvent(GH_OTA_ERROR, from);
+                }
+
+                bool isFlash = strcmp_P(name, PSTR("flash")) == 0;
+                if (!isFlash && strcmp_P(name, PSTR("fs")) != 0) {
+                    answerErr(F("Invalid type"));
+                    return sendEvent(GH_OTA_ERROR, from);
+                }
+
+                size_t ota_size;
+                int ota_type;
+                if (isFlash) {
+                    ota_type = U_FLASH;
+#ifdef ESP8266
+                    ota_size = (size_t)((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000);
+#else
+                    ota_size = UPDATE_SIZE_UNKNOWN;
 #endif
-                answerType(F("ota_err"));
+                } else {
+#ifdef ESP8266
+                    ota_type = U_FS;
+                    ota_size = (size_t)&_FS_end - (size_t)&_FS_start;
+                    close_all_fs();
+#else
+                    ota_type = U_SPIFFS;
+                    ota_size = UPDATE_SIZE_UNKNOWN;
+#endif
+                }
+
+                if (!Update.begin(ota_size, ota_type)) {
+                    answerType(F("ota_err"));
+                    return sendEvent(GH_OTA_ERROR, from);
+                }
+
+                ota_client = client;
+                ota_f = true;
+                ota_tmr = millis();
+                answerType(F("ota_start"));
+                return sendEvent(GH_OTA, from);
+#endif
+            }
+
+            case 18: { // ota_chunk
+#ifdef GH_NO_OTA
+                answerDsbl();
                 return sendEvent(GH_OTA_ERROR, from);
+#else
+                if (!ota_f || ota_client != client) {
+                    answerType(F("ota_err"));
+                    return sendEvent(GH_OTA_ERROR, from);
+                }
+
+                bool isLast = strcmp_P(name, PSTR("last")) == 0;
+                if (!isLast && strcmp_P(name, PSTR("next")) != 0) {
+                    answerType(F("ota_err"));
+                    return sendEvent(GH_OTA_ERROR, from);
+                }
+
+                GH_B64toUpdate(value);
+
+                if (isLast) {
+                    ota_f = false;
+                    reboot_f = GH_REB_OTA;
+                    if (Update.end(true)) answerType(F("ota_end"));
+                    else answerType(F("ota_err"));
+                    sendEvent(GH_OTA_FINISH, fs_client.from);
+                } else {
+                    answerType(F("ota_next_chunk"));
+                    ota_tmr = millis();
+                    sendEvent(GH_OTA_CHUNK, fs_client.from);
+                }
+                return;
+#endif
+            }
 
             case 19: { // ota_url
 #ifdef GH_NO_OTA_URL
@@ -916,8 +944,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 }
 
                 bool isFlash = strcmp_P(name, PSTR("flash")) == 0;
-                bool isFs = !isFlash && strcmp_P(name, PSTR("fs")) == 0;
-                if (!isFlash && !isFs) {
+                if (!isFlash && strcmp_P(name, PSTR("fs")) != 0) {
                     answerErr(F("Invalid type"));
                     return sendEvent(GH_OTA_URL, from);
                 }
@@ -931,14 +958,14 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 ESPhttpUpdate.rebootOnUpdate(false);
                 BearSSL::WiFiClientSecure client;
                 if (strncmp_P(value, PSTR("https"), 5) == 0) client.setInsecure();
-                if (isFs) ESPhttpUpdate.updateFS(client, value);
-                else ok = ESPhttpUpdate.update(client, value);
+                if (isFlash) ok = ESPhttpUpdate.update(client, value);
+                else ESPhttpUpdate.updateFS(client, value);
 #else
                 httpUpdate.rebootOnUpdate(false);
                 WiFiClientSecure client;
                 if (strncmp_P(value, PSTR("https"), 5) == 0) client.setInsecure();
-                if (isFs) ok = httpUpdate.updateSpiffs(client, value);
-                else ok = httpUpdate.update(client, value);
+                if (isFlash) ok = httpUpdate.update(client, value);
+                else ok = httpUpdate.updateSpiffs(client, value);
 #endif
                 if (ok) {
                     reboot_f = GH_REB_OTA_URL;
@@ -948,7 +975,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                     answerType(F("ota_url_err"));
                 }
 
-                return ;
+                return;
 #endif
             }
 #endif
@@ -981,10 +1008,26 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
 #ifdef GH_ESP_BUILD
 #ifndef GH_NO_FS
-        if ((file_d || file_b || file_u || ota_f) && (uint16_t)millis() - fs_tmr >= (GH_CONN_TOUT * 1000)) {
-            if (file_d || file_b) fs_state = GH_FETCH_ABORTED;
-            if (file_u) fs_state = GH_UPLOAD_ABORTED;
-            if (ota_f) fs_state = GH_OTA_ABORTED;
+        if (ota_f && (uint16_t)millis() - ota_tmr >= (GH_CONN_TOUT * 1000)) {
+            Update.end();
+            ota_f = false;
+            sendEvent(GH_OTA_ABORTED, fs_client.from);
+        }
+
+        if ((file_d || file_b || file_u) && (uint16_t)millis() - fs_tmr >= (GH_CONN_TOUT * 1000)) {
+            if (file_d || file_b) {
+                if (fetch_cb) fetch_cb(fetch_path, false);
+                if (file_d) file_d.close();
+                file_b = nullptr;
+                fetch_path = "";
+                sendEvent(GH_FETCH_ABORTED, fs_client.from);
+            }
+
+            if (file_u) {
+                file_u.close();
+                sendEvent(GH_UPLOAD_ABORTED, fs_client.from);
+            }
+
             if (fs_buffer) {
                 delete fs_buffer;
                 fs_buffer = nullptr;
@@ -993,14 +1036,6 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
         if (fs_state != GH_IDLE) {
             switch (fs_state) {
-                case GH_FETCH_ABORTED:
-                    if (fetch_cb) fetch_cb(fetch_path, false);
-                    if (file_d) file_d.close();
-                    file_b = nullptr;
-                    fetch_path = "";
-                    sendEvent(GH_FETCH_ABORTED, fs_client.from);
-                    break;
-
                 case GH_UPLOAD_CHUNK:
                     GH_B64toFile(file_u, fs_buffer);
                     client_ptr = &fs_client;
@@ -1019,37 +1054,6 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                     sendEvent(GH_UPLOAD_FINISH, fs_client.from);
                     break;
 
-                case GH_UPLOAD_ABORTED:
-                    if (file_u) file_u.close();
-                    sendEvent(GH_UPLOAD_ABORTED, fs_client.from);
-                    break;
-#ifndef GH_NO_OTA
-                case GH_OTA_CHUNK:
-                    GH_B64toUpdate(fs_buffer);
-                    client_ptr = &fs_client;
-                    answerType(F("ota_next_chunk"));
-                    fs_tmr = millis();
-                    sendEvent(GH_OTA_CHUNK, fs_client.from);
-                    break;
-
-                case GH_OTA_FINISH:
-                    GH_B64toUpdate(fs_buffer);
-                    delete fs_buffer;
-                    fs_buffer = nullptr;
-                    ota_f = false;
-                    reboot_f = GH_REB_OTA;
-                    client_ptr = &fs_client;
-                    if (Update.end(true)) answerType(F("ota_end"));
-                    else answerType(F("ota_err"));
-                    sendEvent(GH_OTA_FINISH, fs_client.from);
-                    break;
-
-                case GH_OTA_ABORTED:
-                    Update.end();
-                    ota_f = false;
-                    sendEvent(GH_OTA_ABORTED, fs_client.from);
-                    break;
-#endif
                 default:
                     break;
             }
@@ -1489,6 +1493,11 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 #ifndef GH_NO_OTA_URL
     bool ota_url_f = 0;
 #endif
+#ifndef GH_NO_OTA
+    bool ota_f = false;
+    uint16_t ota_tmr = 0;
+    GHclient ota_client;
+#endif`
 #ifndef GH_NO_FS
     bool fs_mounted = 0;
     GHclient fs_client;
@@ -1499,7 +1508,6 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     uint32_t file_b_size, file_b_idx;
     bool file_b_pgm = 0;
     File file_d, file_u;
-    bool ota_f = false;
     uint16_t dwn_chunk_count = 0;
     uint16_t dwn_chunk_amount = 0;
     uint16_t fs_tmr = 0;
