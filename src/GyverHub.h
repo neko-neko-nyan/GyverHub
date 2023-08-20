@@ -670,10 +670,9 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                     if (modules.read(GH_MOD_FSBR)) {
                         if (fs_mounted) answerFsbr();
                         else answerType(F("fs_error"));
-                    }
-#else
-                    answerDsbl();
+                    } else
 #endif
+                    answerDsbl();
                     return sendEvent(GH_FSBR, from);
 
                 case 5:  // format
@@ -683,10 +682,9 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                         GH_FS.end();
                         fs_mounted = GH_FS.begin();
                         answerFsbr();
-                    }
-#else
-                    answerDsbl();
+                    } else
 #endif
+                    answerDsbl();
                     return sendEvent(GH_FORMAT, from);
 
                 case 6:  // reboot
@@ -743,71 +741,94 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                     GH_FS.remove(name);
                     GH_rmdir(name);
                     answerFsbr();
-                }
-#else
-                answerDsbl();
+                } else
 #endif
+                answerDsbl();
                 return sendEvent(GH_DELETE, from);
 
             case 11:  // rename
 #ifndef GH_NO_FS
-                if (modules.read(GH_MOD_RENAME) && GH_FS.rename(name, value)) answerFsbr();
-#else
-                answerDsbl();
+                if (modules.read(GH_MOD_RENAME)) {
+                    if (GH_FS.rename(name, value))
+                        answerFsbr();
+                    else answerErr(F("Rename failed"));
+                } else
 #endif
+                answerDsbl();
                 return sendEvent(GH_RENAME, from);
 
             case 12:  // fetch
-#ifndef GH_NO_FS
-                if (!file_d && !file_b && modules.read(GH_MOD_FETCH)) {
-                    fetch_path = name;
-                    if (fetch_cb) fetch_cb(fetch_path, true);
-                    if (!file_d && !file_b) file_d = GH_FS.open(name, "r");
-                    if (file_d || file_b) {
-                        fs_client = client;
-                        fs_tmr = millis();
-                        uint32_t size = file_b ? file_b_size : file_d.size();
-                        file_b_idx = 0;
-                        dwn_chunk_count = 0;
-                        dwn_chunk_amount = (size + GH_DOWN_CHUNK_SIZE - 1) / GH_DOWN_CHUNK_SIZE;  // round up
-                        answerType(F("fetch_start"));
-                        return sendEvent(GH_FETCH, from);
-                    }
-                }
-#endif
-                answerType(F("fetch_err"));
+#ifdef GH_NO_FS
+                answerDsbl();
                 return sendEvent(GH_FETCH_ERROR, from);
+#else
+                if (!modules.read(GH_MOD_FETCH)) {
+                    answerDsbl();
+                    return sendEvent(GH_FETCH_ERROR, from);
+                }
 
-            case 13:  // fetch_chunk
-#ifndef GH_NO_FS
-                fs_tmr = millis();
-                if ((!file_d && !file_b) || fs_client != client || !modules.read(GH_MOD_FETCH)) {
+                if (file_d || file_b) {
                     answerType(F("fetch_err"));
                     return sendEvent(GH_FETCH_ERROR, from);
-                } else {
-                    answerChunk();
-                    dwn_chunk_count++;
-                    if (dwn_chunk_count >= dwn_chunk_amount) {
-                        if (fetch_cb) fetch_cb(fetch_path, false);
-                        if (file_d) file_d.close();
-                        file_b = nullptr;
-                        fetch_path = "";
-                        return sendEvent(GH_FETCH_FINISH, from);
-                    }
-                    return sendEvent(GH_FETCH_CHUNK, from);
                 }
-#endif
-                break;
 
-            case 14:  // fetch_stop
-#ifndef GH_NO_FS
+                fetch_path = name;
+                if (fetch_cb) fetch_cb(fetch_path, true);
+                if (!file_d && !file_b) file_d = GH_FS.open(name, "r");
+                if (!file_d && !file_b) {
+                    answerType(F("fetch_err"));
+                    return sendEvent(GH_FETCH_ERROR, from);
+                }
+
+                fs_client = client;
+                fs_tmr = millis();
+                uint32_t size = file_b ? file_b_size : file_d.size();
+                file_b_idx = 0;
+                dwn_chunk_count = 0;
+                dwn_chunk_amount = (size + GH_DOWN_CHUNK_SIZE - 1) / GH_DOWN_CHUNK_SIZE;  // round up
+                answerType(F("fetch_start"));
+                return sendEvent(GH_FETCH, from);
+#endif
+
+            case 13:  // fetch_chunk
+#ifdef GH_NO_FS
+                answerDsbl();
+                return sendEvent(GH_FETCH_ERROR, from);
+#else
+                if ((!file_d && !file_b) || fs_client != client) {
+                    answerType(F("fetch_err"));
+                    return sendEvent(GH_UPLOAD_ERROR, from);
+                }
+
+                fs_tmr = millis();
+                answerChunk();
+                dwn_chunk_count++;
+                if (dwn_chunk_count < dwn_chunk_amount) 
+                    return sendEvent(GH_FETCH_CHUNK, from);
+                
                 if (fetch_cb) fetch_cb(fetch_path, false);
                 if (file_d) file_d.close();
                 file_b = nullptr;
-                fetch_path = "";
-                sendEvent(GH_FETCH_ABORTED, from);
+                fetch_path.clear();
+                return sendEvent(GH_FETCH_FINISH, from);
 #endif
-                break;
+
+            case 14:  // fetch_stop
+#ifdef GH_NO_FS
+                answerDsbl();
+                return sendEvent(GH_FETCH_ERROR, from);
+#else
+                if ((!file_d && !file_b) || fs_client != client) {
+                    answerType(F("fetch_err"));
+                    return sendEvent(GH_UPLOAD_ERROR, from);
+                }
+
+                if (fetch_cb) fetch_cb(fetch_path, false);
+                if (file_d) file_d.close();
+                file_b = nullptr;
+                fetch_path.clear();
+                return sendEvent(GH_FETCH_ABORTED, from);
+#endif
 
             case 15:  // upload
 #ifdef GH_NO_FS
