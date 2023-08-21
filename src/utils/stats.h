@@ -31,6 +31,37 @@ enum GHconn_t {
 #define GH_CONN_AMOUNT 6
 
 
+// команда от клиента
+enum class GHcommand : uint16_t {
+    FOCUS = 0,
+    PING,
+    UNFOCUS,
+    INFO,
+    FSBR,
+    FORMAT,
+    REBOOT,
+    DATA,
+    SET,
+    CLI,
+    DELETE,
+    RENAME,
+    FETCH,
+    FETCH_CHUNK,
+    FETCH_STOP,
+    UPLOAD,
+    UPLOAD_CHUNK,
+    OTA,
+    OTA_CHUNK,
+    OTA_URL,
+    READ,
+
+    HTTP_FETCH = 0xF000,
+    HTTP_UPLOAD,
+    HTTP_OTA,
+
+    UNKNOWN = 0xFFFF,
+};
+
 // системные события
 enum GHevent_t {
     GH_FOCUS,

@@ -3,5 +3,5 @@
 #include "../config.hpp"
 #include "../macro.hpp"
 
-int GH_getCmd(const char* str);
+GHcommand GH_getCmd(const char* str);
 //int GH_getCmdN(char* str);

@@ -114,7 +114,7 @@ class HubHTTP {
                         server.send(503);
                         return;
                     }
-                    if (!_reqHook(path.c_str(), "", GHclient(GH_HTTP, server.arg(F("client_id")).c_str()), GH_UPLOAD)) {
+                    if (!_reqHook(path.c_str(), "", GHclient(GH_HTTP, server.arg(F("client_id")).c_str()), GHcommand::HTTP_UPLOAD)) {
                         server.send(503);
                         return;
                     }
@@ -148,7 +148,7 @@ class HubHTTP {
                         server.send(503);
                         return;
                     }
-                    if (!_reqHook("", "", GHclient(GH_HTTP, server.arg(F("client_id")).c_str()), GH_OTA)) {
+                    if (!_reqHook("", "", GHclient(GH_HTTP, server.arg(F("client_id")).c_str()), GHcommand::HTTP_OTA)) {
                         server.send(503);
                         return;
                     }
@@ -259,7 +259,7 @@ class HubHTTP {
 
     virtual void parse(char *url, GHconn_t from) = 0;
     virtual void _rebootOTA() = 0;
-    virtual bool _reqHook(const char *name, const char *value, GHclient client, GHevent_t event) = 0;
+    virtual bool _reqHook(const char *name, const char *value, GHclient client, GHcommand cmd) = 0;
     virtual bool _checkModule(GHmodule_t mod) = 0;
 
 #ifndef GH_NO_FS
@@ -283,7 +283,7 @@ class HubHTTP {
             server.send(403);
             return 1;
         }
-        if (!_reqHook(path.c_str(), "", GHclient(GH_HTTP, server.arg(F("client_id")).c_str()), GH_FETCH)) {
+        if (!_reqHook(path.c_str(), "", GHclient(GH_HTTP, server.arg(F("client_id")).c_str()), GHcommand::HTTP_FETCH)) {
             server.send(403);
             return 1;
         }

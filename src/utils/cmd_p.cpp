@@ -25,15 +25,15 @@ GH_PGM(_GH_CMD20, "read");
 #define GH_CMD_LEN 20
 GH_PGM_LIST(_GH_cmd_list, _GH_CMD0, _GH_CMD1, _GH_CMD2, _GH_CMD3, _GH_CMD4, _GH_CMD5, _GH_CMD6, _GH_CMD7, _GH_CMD8, _GH_CMD9, _GH_CMD10, _GH_CMD11, _GH_CMD12, _GH_CMD13, _GH_CMD14, _GH_CMD15, _GH_CMD16, _GH_CMD17, _GH_CMD18, _GH_CMD19, _GH_CMD20);
 
-int GH_getCmd(const char* str) {
+GHcommand GH_getCmd(const char* str) {
     for (int i = 0; i < GH_CMD_LEN; i++) {
 #ifdef GH_ESP_BUILD
-        if (!strcmp_P(str, _GH_cmd_list[i])) return i;
+        if (!strcmp_P(str, _GH_cmd_list[i])) return static_cast<GHcommand>(i);
 #else
-        if (!strcmp_P(str, (PGM_P)pgm_read_word(_GH_cmd_list + i))) return i;
+        if (!strcmp_P(str, (PGM_P)pgm_read_word(_GH_cmd_list + i))) return static_cast<GHcommand>(i);
 #endif
     }
-    return -1;
+    return GHcommand::UNKNOWN;
 }
 
 /*

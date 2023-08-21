@@ -20,12 +20,11 @@ enum GHbuild_t {
 
 class GHbuild {
    public:
-    GHbuild(GHbuild_t btype = GH_BUILD_NONE, const char* name = nullptr, const char* value = nullptr, GHclient nclient = GHclient(), GHevent_t ncmd = GH_IDLE) {
+    GHbuild(GHbuild_t btype = GH_BUILD_NONE, const char* name = nullptr, const char* value = nullptr, GHclient nclient = GHclient()) {
         type = btype;
         action.name = name;
         action.value = value;
         client = nclient;
-        cmd = ncmd;
     }
 
     bool parse(VSPTR cname, void* var, GHdata_t dtype, bool fstr) {
@@ -45,7 +44,4 @@ class GHbuild {
 
     // действие
     GHaction action;
-
-    // событие
-    GHevent_t cmd = GH_IDLE;
 };

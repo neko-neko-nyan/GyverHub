@@ -293,7 +293,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     }
 
     // подключить обработчик запроса клиента
-    void onRequest(bool (*handler)(GHbuild build)) {
+    void onRequest(bool (*handler)(GHbuild build, GHcommand cmd)) {
         req_cb = *handler;
     }
 
@@ -604,8 +604,8 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         // p.size >= 4
 
         const char* cmd = p.str[3];
-        int cmdn = GH_getCmd(cmd);
-        if (cmdn == -1) {
+        GHcommand cmdn = GH_getCmd(cmd);
+        if (cmdn == GHcommand::UNKNOWN) {
             GH_DEBUG_LOG("Event: GH_UNKNOWN from %d (cmdn == -1)", from);
             return;
         }
@@ -615,7 +615,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         GHclient client(from, client_id);
         client_ptr = &client;
 
-        if (!_reqHook(name, value, client, (GHevent_t)cmdn)) {
+        if (!_reqHook(name, value, client, cmdn)) {
             answerErr(F("Forbidden"));
             return;
         }
@@ -623,11 +623,13 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 #if GH_MQTT_IMPL != GH_IMPL_NONE
         // MQTT HOOK
         if (p.size == 4 && from == GH_MQTT && build_cb) {
+             if (cmdn == GHcommand::READ) {
                 GH_DEBUG_LOG("Event: GH_READ_HOOK from %d", from);
                 if (modules.read(GH_MOD_READ)) sendGet(name);
                 return;
             }
             
+            if (cmdn == GHcommand::SET) {
                 GH_DEBUG_LOG("Event: GH_SET_HOOK from %d", from);
                 if (modules.read(GH_MOD_SET)) {
                     GHbuild build(GH_BUILD_ACTION, name, value, client);
@@ -645,24 +647,29 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
         if (p.size == 4) {
             switch (cmdn) {
+                case GHcommand::FOCUS:
                     GH_DEBUG_LOG("Event: GH_FOCUS from %d", from);
                     answerUI();
                     return;
 
+                case GHcommand::PING:
                     GH_DEBUG_LOG("Event: GH_PING from %d", from);
                     answerType();
                     return;
 
+                case GHcommand::UNFOCUS:
                     GH_DEBUG_LOG("Event: GH_UNFOCUS from %d", from);
                     answerType();
                     clearFocus(from);
                     return;
 
+                case GHcommand::INFO:
                     GH_DEBUG_LOG("Event: GH_INFO from %d", from);
                     if (modules.read(GH_MOD_INFO)) answerInfo();
                     return;
 
 #ifdef GH_ESP_BUILD
+                case GHcommand::FSBR:
                     GH_DEBUG_LOG("Event: GH_FSBR from %d", from);
 #ifndef GH_NO_FS
                     if (modules.read(GH_MOD_FSBR)) {
@@ -673,6 +680,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                     answerDsbl();
                     return;
 
+                case GHcommand::FORMAT:
                     GH_DEBUG_LOG("Event: GH_FORMAT from %d", from);
 #ifndef GH_NO_FS
                     if (modules.read(GH_MOD_FORMAT)) {
@@ -685,6 +693,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                     answerDsbl();
                     return;
 
+                case GHcommand::REBOOT:
                     GH_DEBUG_LOG("Event: GH_REBOOT from %d", from);
                     if (modules.read(GH_MOD_REBOOT)) {
                         reboot_f = GH_REB_BUTTON;
@@ -692,19 +701,23 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                     }
                     return;
 #endif
+                default:
+                    GH_DEBUG_LOG("Event: GH_UNKNOWN from %d (size == 4, cmdn == %d)", from, cmdn);
+                    return;
             }
-            return;
         }
 
         // p.size == 5
 
         switch (cmdn) {
+            case GHcommand::DATA:
                 GH_DEBUG_LOG("Event: GH_DATA from %d", from);
                 answ_f = 0;
                 if (data_cb) data_cb(name, value);
                 if (!answ_f) answerType();
                 return;
 
+            case GHcommand::SET:
                 GH_DEBUG_LOG("Event: GH_SET from %d", from);
                 if (!build_cb || !modules.read(GH_MOD_SET)) {
                     answerType();
@@ -723,15 +736,17 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 }
                 return;
 
+            case GHcommand::CLI:
                 GH_DEBUG_LOG("Event: GH_CLI from %d", from);
                 answerType();
                 if (cli_cb) {
                     String str(value);
                     cli_cb(str);
                 }
-                return sendEvent(GH_CLI, from);
+                return;
 
 #ifdef GH_ESP_BUILD
+            case GHcommand::DELETE:
                 GH_DEBUG_LOG("Event: GH_DELETE from %d", from);
 #ifndef GH_NO_FS
                 if (modules.read(GH_MOD_DELETE)) {
@@ -743,7 +758,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 answerDsbl();
                 return;
 
-            case 11:  // rename
+            case GHcommand::RENAME:
                 GH_DEBUG_LOG("Event: GH_RENAME from %d", from);
 #ifndef GH_NO_FS
                 if (modules.read(GH_MOD_RENAME)) {
@@ -755,7 +770,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 answerDsbl();
                 return;
 
-            case 12: { // fetch
+            case GHcommand::FETCH: {
 #ifdef GH_NO_FS
                 GH_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (disabled on CT)", from);
                 answerDsbl();
@@ -794,7 +809,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 #endif
             }
 
-            case 13:  // fetch_chunk
+            case GHcommand::FETCH_CHUNK:
 #ifdef GH_NO_FS
                 GH_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (disabled on CT)", from);
                 answerDsbl();
@@ -810,7 +825,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 fs_tmr = millis();
                 answerChunk();
                 dwn_chunk_count++;
-                if (dwn_chunk_count < dwn_chunk_amount) 
+                if (dwn_chunk_count < dwn_chunk_amount)
                     return;
                 
                 GH_DEBUG_LOG("Event: GH_FETCH_FINISH from %d", from);
@@ -821,7 +836,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 return;
 #endif
 
-            case 14:  // fetch_stop
+            case GHcommand::FETCH_STOP:
 #ifdef GH_NO_FS
                 GH_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (disabled on CT)", from);
                 answerDsbl();
@@ -841,7 +856,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 return;
 #endif
 
-            case 15:  // upload
+            case GHcommand::UPLOAD:
 #ifdef GH_NO_FS
                 GH_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (disabled on CT)", from);
                 answerDsbl();
@@ -875,7 +890,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 return;
 #endif
 
-            case 16: { // upload_chunk
+            case GHcommand::UPLOAD_CHUNK: {
 #ifdef GH_NO_FS
                 GH_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (disabled on CT)", from);
                 answerDsbl();
@@ -909,7 +924,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 #endif
             }
 
-            case 17: { // ota
+            case GHcommand::OTA: {
 #ifdef GH_NO_OTA
                 GH_DEBUG_LOG("Event: GH_OTA_ERROR from %d (disabled on CT)", from);
                 answerDsbl();
@@ -969,7 +984,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 #endif
             }
 
-            case 18: { // ota_chunk
+            case GHcommand::OTA_CHUNK: {
 #ifdef GH_NO_OTA
                 GH_DEBUG_LOG("Event: GH_OTA_ERROR from %d (disabled on CT)", from);
                 answerDsbl();
@@ -995,7 +1010,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                     GH_DEBUG_LOG("Event: GH_OTA_FINISH from %d", from);
                     ota_f = false;
                     if (Update.end(true)) {
-                    reboot_f = GH_REB_OTA;
+                        reboot_f = GH_REB_OTA;
                         answerType(F("ota_end"));
                     } else {
                         GH_DEBUG_LOG("Event: GH_OTA_ERROR from %d (Update.end failed)", from);
@@ -1009,7 +1024,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 #endif
             }
 
-            case 19: { // ota_url
+            case GHcommand::OTA_URL: {
 #ifdef GH_NO_OTA_URL
                 GH_DEBUG_LOG("Event: GH_OTA_URL from %d (disabled on CT)", from);
                 answerDsbl();
@@ -1163,8 +1178,8 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 #endif
     }
 
-    bool _reqHook(const char* name, const char* value, GHclient client, GHevent_t event) {
-        if (req_cb && !req_cb(GHbuild(GH_BUILD_NONE, name, value, client, event))) return 0;  // forbidden
+    bool _reqHook(const char* name, const char* value, GHclient client, GHcommand event) {
+        if (req_cb && !req_cb(GHbuild(GH_BUILD_NONE, name, value, client), event)) return 0;  // forbidden
         return 1;
     }
     bool _checkModule(GHmodule_t mod) {
@@ -1509,7 +1524,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     void (*fetch_cb)(String& path, bool start) = nullptr;
     void (*data_cb)(const char* name, const char* value) = nullptr;
     void (*build_cb)() = nullptr;
-    bool (*req_cb)(GHbuild build) = nullptr;
+    bool (*req_cb)(GHbuild build, GHcommand cmd) = nullptr;
     void (*info_cb)(GHinfo_t info) = nullptr;
     void (*cli_cb)(String& str) = nullptr;
     void (*manual_cb)(String& s, bool broadcast) = nullptr;
