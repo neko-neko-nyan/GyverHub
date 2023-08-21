@@ -31,8 +31,6 @@ class HubMQTT {
     virtual void parse(char* url, const char* value, GHconn_t from) = 0;
     virtual const char* getPrefix() = 0;
     virtual const char* getID() = 0;
-    virtual void sendEvent(GHevent_t state, GHconn_t from) = 0;
-
     void beginMQTT() {
         mqtt.onConnect([this](GH_UNUSED bool pres) {
             String sub_topic(getPrefix());
@@ -52,7 +50,7 @@ class HubMQTT {
 
             String online(F("online"));
             sendMQTT(status, online);
-            sendEvent(GH_CONNECTED, GH_MQTT);
+            GH_DEBUG_LOG("MQTT connected");
             mqtt_tmr = millis();
         });
 
@@ -60,7 +58,7 @@ class HubMQTT {
             String m_id("DEV-");
             m_id += String(random(0xffffff), HEX);
             mqtt.setClientId(m_id.c_str());
-            sendEvent(GH_DISCONNECTED, GH_MQTT);
+            GH_DEBUG_LOG("MQTT disconnected");
             mqtt_tmr = millis();
         });
 
@@ -79,7 +77,7 @@ class HubMQTT {
     void tickMQTT() {
         if (mq_configured && !mqtt.connected() && (!mqtt_tmr || millis() - mqtt_tmr > GH_MQTT_RECONNECT)) {
             mqtt_tmr = millis();
-            sendEvent(GH_CONNECTING, GH_MQTT);
+            GH_DEBUG_LOG("MQTT reconnecting");
             mqtt.connect();
         }
     }

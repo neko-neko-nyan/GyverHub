@@ -417,8 +417,7 @@ private:
 
     esp_err_t _handler2(httpd_req_t *req) {
         if (req->method == HTTP_GET) {
-            ESP_LOGW("ws", "New connection");
-            sendEvent(GH_CONNECTED, GH_WS);
+            GH_DEBUG_LOG("WS connected");
             return ESP_OK;
         }
 
@@ -464,15 +463,6 @@ private:
 
         free(buf);
         return ret;
-        // switch (etype) {
-        //     case WS_EVT_DISCONNECT:
-        //         sendEvent(GH_DISCONNECTED, GH_WS);
-        //         break;
-
-        //     case WS_EVT_ERROR:
-        //         sendEvent(GH_ERROR, GH_WS);
-        //         break;
-        // }
     }
 
     static void send_hello(void *arg) {
@@ -497,7 +487,6 @@ private:
 
 protected:
     virtual void parse(char* url, GHconn_t from) = 0;
-    virtual void sendEvent(GHevent_t state, GHconn_t from) = 0;
 
     void beginWS() {
         httpd_config_t config = HTTPD_DEFAULT_CONFIG();

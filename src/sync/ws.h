@@ -13,21 +13,20 @@ class HubWS {
     HubWS() : ws(GH_WS_PORT, "", "hub") {}
 
     virtual void parse(char* url, GHconn_t from) = 0;
-    virtual void sendEvent(GHevent_t state, GHconn_t from) = 0;
 
     void beginWS() {
         ws.onEvent([this](uint8_t num, WStype_t type, uint8_t* data, GH_UNUSED size_t len) {
             switch (type) {
                 case WStype_CONNECTED:
-                    sendEvent(GH_CONNECTED, GH_WS);
+                    GH_DEBUG_LOG("WS connected");
                     break;
 
                 case WStype_DISCONNECTED:
-                    sendEvent(GH_DISCONNECTED, GH_WS);
+                    GH_DEBUG_LOG("WS disconnected");
                     break;
 
                 case WStype_ERROR:
-                    sendEvent(GH_ERROR, GH_WS);
+                    GH_DEBUG_LOG("WS error");
                     break;
 
                 case WStype_TEXT: {

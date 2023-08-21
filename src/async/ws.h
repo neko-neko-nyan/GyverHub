@@ -15,21 +15,20 @@ class HubWS {
     }
 
     virtual void parse(char* url, GHconn_t from) = 0;
-    virtual void sendEvent(GHevent_t state, GHconn_t from) = 0;
 
     void beginWS() {
         ws.onEvent([this](GH_UNUSED AsyncWebSocket* server, GH_UNUSED AsyncWebSocketClient* client, AwsEventType etype, void* arg, uint8_t* data, size_t len) {
             switch (etype) {
                 case WS_EVT_CONNECT:
-                    sendEvent(GH_CONNECTED, GH_WS);
+                    GH_DEBUG_LOG("WS connected");
                     break;
 
                 case WS_EVT_DISCONNECT:
-                    sendEvent(GH_DISCONNECTED, GH_WS);
+                    GH_DEBUG_LOG("WS disconnected");
                     break;
 
                 case WS_EVT_ERROR:
-                    sendEvent(GH_ERROR, GH_WS);
+                    GH_DEBUG_LOG("WS error");
                     break;
 
                 case WS_EVT_DATA: {

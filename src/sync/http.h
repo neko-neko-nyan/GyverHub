@@ -118,7 +118,7 @@ class HubHTTP {
                         server.send(503);
                         return;
                     }
-                    sendEvent(GH_UPLOAD, GH_HTTP);
+                    GH_DEBUG_LOG("HTTP upload");
                     GH_mkdir_pc(path.c_str());
                     file = GH_FS.open(path.c_str(), "w");
                     if (!file) server.send(500);
@@ -152,7 +152,7 @@ class HubHTTP {
                         server.send(503);
                         return;
                     }
-                    sendEvent(GH_OTA, GH_HTTP);
+                    GH_DEBUG_LOG("HTTP ota");
 
                     String type_s(server.arg(F("type")));
                     int ota_type = 0;
@@ -258,7 +258,6 @@ class HubHTTP {
     }
 
     virtual void parse(char *url, GHconn_t from) = 0;
-    virtual void sendEvent(GHevent_t state, GHconn_t from) = 0;
     virtual void _rebootOTA() = 0;
     virtual bool _reqHook(const char *name, const char *value, GHclient client, GHevent_t event) = 0;
     virtual bool _checkModule(GHmodule_t mod) = 0;
@@ -288,7 +287,7 @@ class HubHTTP {
             server.send(403);
             return 1;
         }
-        sendEvent(GH_FETCH, GH_HTTP);
+        GH_DEBUG_LOG("HTTP fetch");
 
         File *file_p = nullptr;
         const uint8_t *bytes = nullptr;

@@ -41,3 +41,10 @@
 #ifndef GH_HTTP_IMPL
 #define GH_HTTP_IMPL GH_IMPL
 #endif
+
+
+#ifdef GH_LIB_DEBUG
+#define GH_DEBUG_LOG(fmt, ...) do { Serial.printf("%s:%d in %s: " fmt "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ## __VA_ARGS__); } while(0)
+#else
+#define GH_DEBUG_LOG(fmt, ...) do {} while(0)
+#endif

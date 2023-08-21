@@ -40,12 +40,12 @@ private:
             String online("online");
             self->sendMQTT(status, online);
 
-            self->sendEvent(GH_CONNECTED, GH_MQTT);
+            GH_DEBUG_LOG("MQTT connected");
             break;
         }
 
         case MQTT_EVENT_DISCONNECTED:
-            self->sendEvent(GH_DISCONNECTED, GH_MQTT);
+            GH_DEBUG_LOG("MQTT disconnected");
             break;
 
         case MQTT_EVENT_DATA: {
@@ -154,7 +154,6 @@ protected:
     virtual void parse(char* url, const char* value, GHconn_t from) = 0;
     virtual const char* getPrefix() = 0;
     virtual const char* getID() = 0;
-    virtual void sendEvent(GHevent_t state, GHconn_t from) = 0;
 
     void beginMQTT() {
         if (client == nullptr) {

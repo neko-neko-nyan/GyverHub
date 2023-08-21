@@ -32,7 +32,6 @@ class HubMQTT {
     virtual void parse(char* url, const char *value, GHconn_t from) = 0;
     virtual const char* getPrefix() = 0;
     virtual const char* getID() = 0;
-    virtual void sendEvent(GHevent_t state, GHconn_t from) = 0;
 
     void beginMQTT() {
         mqtt.setCallback([this](char* topic, uint8_t* data, uint16_t len) {
@@ -51,7 +50,7 @@ class HubMQTT {
         if (mq_configured) {
             if (!mqtt.connected() && (!mqtt_tmr || millis() - mqtt_tmr > GH_MQTT_RECONNECT)) {
                 mqtt_tmr = millis();
-                sendEvent(GH_CONNECTING, GH_MQTT);
+                GH_DEBUG_LOG("MQTT reconnecting");
                 connectMQTT();
             }
             mqtt.loop();
@@ -110,8 +109,10 @@ class HubMQTT {
             sub_topic += getID();
             sub_topic += "/#";
             mqtt.subscribe(sub_topic.c_str(), qos);
+            GH_DEBUG_LOG("MQTT connected");
+        } else {
+            GH_DEBUG_LOG("MQTT connect failed");
         }
-        sendEvent(ok ? GH_CONNECTED : GH_ERROR, GH_MQTT);
     }
     void _setupMQTT(const char* login, const char* pass, uint8_t nqos, bool nret) {
         mqtt.setClient(mclient);
