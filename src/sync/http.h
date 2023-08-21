@@ -4,7 +4,8 @@
 #include "../config.hpp"
 #include "../macro.hpp"
 #include "../utils/client.h"
-#include "../utils/mime.h"
+#include "../utils2/mime.h"
+#include "../utils2/files.h"
 #include "../utils/stats.h"
 #include "../utils/modules.h"
 
@@ -297,7 +298,7 @@ class HubHTTP {
 
         if (bytes && size) {
             server.setContentLength(size);
-            server.send(200, GHmime(path).c_str(), "");
+            server.send(200, gyverhub::getMimeByPath(path.c_str(), path.length()), "");
             if (pgm) server.sendContent_P((PGM_P)bytes, size);
             else server.sendContent((PGM_P)bytes, size);
             _fetchEndHook(path);
@@ -305,14 +306,14 @@ class HubHTTP {
         }
 
         if (file_p && *file_p) {
-            server.streamFile(*file_p, GHmime(path));
+            server.streamFile(*file_p, gyverhub::getMimeByPath(path.c_str(), path.length()));
             _fetchEndHook(path);
             return 1;
         }
 
         File f = GH_FS.open(path.c_str(), "r");
         if (f) {
-            server.streamFile(f, GHmime(path));
+            server.streamFile(f, gyverhub::getMimeByPath(path.c_str(), path.length()));
             return 1;
         }
 

@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include "GyverHub.h"
 #include "utils/stats.h"
-#include "utils/mime.h"
+#include "utils2/mime.h"
 #include "utils/misc.h"
 
 #include "esp_inc/index.h"
@@ -73,7 +73,7 @@ private:
         const char *p = strrchr(req->uri, '?');
         size_t length = p ? p - req->uri : strlen(req->uri);
 
-        res = httpd_resp_set_type(req, GH_getMimeByPath(req->uri, length));
+        res = httpd_resp_set_type(req, gyverhub::getMimeByPath(req->uri, length));
         if (res != ESP_OK) return res;
 
         return httpd_resp_send(req, data->c_str(), data->length());
@@ -92,7 +92,7 @@ private:
         if (res != ESP_OK) return res;
 
         bool gzip;
-        res = httpd_resp_set_type(req, GH_getMimeByPath(name, strlen(name), &gzip));
+        res = httpd_resp_set_type(req, gyverhub::getMimeByPath(name, strlen(name), &gzip));
         if (res != ESP_OK) return res;
         
         if (gzip) {
@@ -137,7 +137,7 @@ private:
         esp_err_t res = setCorsHeaders(req);
         if (res != ESP_OK) return res;
 
-        res = httpd_resp_set_type(req, GH_getMimeByPath(file.path(), strlen(file.path())));
+        res = httpd_resp_set_type(req, gyverhub::getMimeByPath(file.path(), strlen(file.path())));
         if (res != ESP_OK) return res;
 
         {

@@ -38,14 +38,15 @@ GH_PGM_LIST(exts4, ext_gzip, ext_html, ext_jpeg, ext_json);
 
 GH_PGM(defaultMime, "text/html");
 
+PGM_P gyverhub::getMimeByExt(const char *ext, size_t length, bool *isGizp) {
+    if (isGizp != nullptr) *isGizp = false;
 
-static PGM_P getMimeByExt(const char *ext, size_t length, bool &isGizp) {
     switch (length) {
         case 2:
             for (size_t i = 0; i < countof(exts2); i++) {
                 PGM_P it = (PGM_P) pgm_read_ptr(&exts2[i]);
                 if (PGMSTRCMP2(it, ext)) {
-                    if (i == 0) isGizp = true;
+                    if (i == 0 && isGizp != nullptr) *isGizp = true;
                     return it + 2;
                 }
             }
@@ -61,7 +62,7 @@ static PGM_P getMimeByExt(const char *ext, size_t length, bool &isGizp) {
             for (size_t i = 0; i < countof(exts4); i++) {
                 PGM_P it = (PGM_P) pgm_read_ptr(&exts4[i]);
                 if (PGMSTRCMP4(it, ext)) {
-                    if (i == 0) isGizp = true;
+                    if (i == 0 && isGizp != nullptr) *isGizp = true;
                     return it + 4;
                 }
             }
@@ -73,16 +74,11 @@ static PGM_P getMimeByExt(const char *ext, size_t length, bool &isGizp) {
     return defaultMime;
 }
 
-PGM_P GH_getMimeByExt(const char *ext, size_t length) {
-    bool _u;
-    return getMimeByExt(ext, length, _u);
-}
-
 /**
  * @param path Указатель на начало имени файла
  * @param end_p Указатель на конец имени файла
  */
-size_t getExtOf(const char *path, const char * &end_p) {
+static size_t getExtOf(const char *path, const char * &end_p) {
     size_t ext_len = 0;
     while (end_p != path && *end_p != '.') end_p--, ext_len++;
     if (end_p == path || ext_len == 0) return 0; // no '.' in path or '.' is last char
@@ -90,35 +86,26 @@ size_t getExtOf(const char *path, const char * &end_p) {
     return ext_len;
 }
 
-PGM_P GH_getMimeByPath(const char *path, size_t length, bool *isGzip) {
+PGM_P gyverhub::getMimeByPath(const char *path, size_t length, bool *isGzip) {
     const char *end_p = path + length - 1;
-    bool isGzip2 = false;
 
     // *end_p = last char
     size_t ext_len = getExtOf(path, end_p);
     // *(end_p-1) = '.'
-    PGM_P mime = getMimeByExt(end_p, ext_len, isGzip2);
+    PGM_P mime = getMimeByExt(end_p, ext_len, isGzip);
 
-    if (isGzip != nullptr) {
-        *isGzip = isGzip2;
-        if (isGzip2) {
-            end_p -= 2;
-            // *(end_p+1) = '.'
+    if (isGzip != nullptr && *isGzip) {
+        end_p -= 2;
+        // *(end_p+1) = '.'
 
-            ext_len = getExtOf(path, end_p);
-            if (ext_len == 0) { // no '.' in path
-                *isGzip = false;
-                return mime;
-            }
-
-            mime = getMimeByExt(end_p, ext_len, isGzip2);
+        ext_len = getExtOf(path, end_p);
+        if (ext_len == 0) { // no '.' in path
+            *isGzip = false;
+            return mime;
         }
+
+        mime = getMimeByExt(end_p, ext_len);
     }
 
     return mime;
-}
-
-String GHmime(const String &path) {
-    PGM_P mime = GH_getMimeByPath(path.c_str(), path.length(), nullptr);
-    return { (const __FlashStringHelper*) mime };
 }

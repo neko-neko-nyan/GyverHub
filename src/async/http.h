@@ -1,7 +1,7 @@
 #pragma once
 #include "../config.hpp"
 #include "../macro.hpp"
-#include "../utils/mime.h"
+#include "../utils2/mime.h"
 
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
@@ -67,7 +67,7 @@ class HubHTTP {
 
 #ifndef GH_NO_HTTP_FETCH
         server.on(GH_PUBLIC_PATH "*", HTTP_GET, [this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse(GH_FS, request->url(), GHmime(request->url()));
+            AsyncWebServerResponse* response = request->beginResponse(GH_FS, request->url(), gyverhub::getMimeByPath(request->url().c_str(), request->url().length()));
             request->send(response);
         });
 #endif
