@@ -20,9 +20,10 @@ GH_PGM(_GH_CMD16, "upload_chunk");
 GH_PGM(_GH_CMD17, "ota");
 GH_PGM(_GH_CMD18, "ota_chunk");
 GH_PGM(_GH_CMD19, "ota_url");
+GH_PGM(_GH_CMD20, "read");
 
 #define GH_CMD_LEN 20
-GH_PGM_LIST(_GH_cmd_list, _GH_CMD0, _GH_CMD1, _GH_CMD2, _GH_CMD3, _GH_CMD4, _GH_CMD5, _GH_CMD6, _GH_CMD7, _GH_CMD8, _GH_CMD9, _GH_CMD10, _GH_CMD11, _GH_CMD12, _GH_CMD13, _GH_CMD14, _GH_CMD15, _GH_CMD16, _GH_CMD17, _GH_CMD18, _GH_CMD19);
+GH_PGM_LIST(_GH_cmd_list, _GH_CMD0, _GH_CMD1, _GH_CMD2, _GH_CMD3, _GH_CMD4, _GH_CMD5, _GH_CMD6, _GH_CMD7, _GH_CMD8, _GH_CMD9, _GH_CMD10, _GH_CMD11, _GH_CMD12, _GH_CMD13, _GH_CMD14, _GH_CMD15, _GH_CMD16, _GH_CMD17, _GH_CMD18, _GH_CMD19, _GH_CMD20);
 
 int GH_getCmd(const char* str) {
     for (int i = 0; i < GH_CMD_LEN; i++) {

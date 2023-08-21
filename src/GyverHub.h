@@ -622,30 +622,30 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
             return;
         }
 
-        if (p.size == 4) {
 #if GH_MQTT_IMPL != GH_IMPL_NONE
-            // MQTT HOOK
-            if (from == GH_MQTT && build_cb) {
-                if (!strcmp_P(cmd, PSTR("read"))) {
-                    if (modules.read(GH_MOD_READ)) sendGet(name);
-                    client_ptr = nullptr;
-                    return sendEvent(GH_READ_HOOK, from);
-                } else if (!strcmp_P(cmd, PSTR("set"))) {
-                    if (modules.read(GH_MOD_SET)) {
-                        GHbuild build(GH_BUILD_ACTION, name, value, client);
-                        bptr = &build;
-                        build_cb();
-                        bptr = nullptr;
-                        client_ptr = nullptr;
-                        if (autoGet_f) sendGet(name, value);
-                        if (autoUpd_f) _sendUpdate(name, value);
-                    }
-                    return sendEvent(GH_SET_HOOK, from);
-                }
+        // MQTT HOOK
+        if (p.size == 4 && from == GH_MQTT && build_cb) {
+             if (cmdn == 20) {  // read
+                if (modules.read(GH_MOD_READ)) sendGet(name);
+                return sendEvent(GH_READ_HOOK, from);
             }
+            
+            if (cmdn == 8) {  // set
+                if (modules.read(GH_MOD_SET)) {
+                    GHbuild build(GH_BUILD_ACTION, name, value, client);
+                    bptr = &build;
+                    build_cb();
+                    bptr = nullptr;
+                    if (autoGet_f) sendGet(name, value);
+                    if (autoUpd_f) _sendUpdate(name, value);
+                }
+                return sendEvent(GH_SET_HOOK, from);
+            }
+        }
 #endif
-            setFocus(from);
+        setFocus(from);
 
+        if (p.size == 4) {
             switch (cmdn) {
                 case 0:  // focus
                     answerUI();
@@ -699,7 +699,6 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         }
 
         // p.size == 5
-        setFocus(from);
 
         switch (cmdn) {
             case 7:  // data
