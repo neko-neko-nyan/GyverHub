@@ -60,8 +60,5 @@ void GH_addEsc(String* s, VSPTR str, bool fstr = 0, char sym = '\"');
 #ifndef GH_NO_FS
 void GH_listDir(String& str, const String& path = "/", char div = ',');
 void GH_showFiles(String& answ, const String& path, GH_UNUSED uint8_t levels = 0, uint16_t* count = nullptr);
-void GH_mkdir_p(char *path);
-void GH_mkdir_pc(const char *path);
-void GH_rmdir(const char *path);
 #endif
 #endif

@@ -119,7 +119,7 @@ class HubHTTP {
                         return;
                     }
                     GH_DEBUG_LOG("HTTP upload");
-                    GH_mkdir_pc(path.c_str());
+                    gyverhub::mkdirRecursive(path.c_str());
                     file = GH_FS.open(path.c_str(), "w");
                     if (!file) server.send(500);
 

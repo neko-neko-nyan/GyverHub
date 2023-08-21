@@ -181,7 +181,7 @@ private:
         }
         Serial.println(filename);
 
-        GH_mkdir_p(filename);
+        gyverhub::mkdirRecursive(filename);
         File file = GH_FS.open(filename, "w");
         if (!file) {
             free(filename);
