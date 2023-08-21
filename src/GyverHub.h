@@ -17,9 +17,10 @@
 #include "utils/misc.h"
 #include "utils/modules.h"
 #include "utils/stats.h"
-#include "utils/stats_p.h"
+#include "utils2/base64.h"
 #include "utils/timer.h"
 #include "utils/json.h"
+#include "utils2/files.h"
 
 #ifdef GH_ESP_BUILD
 #include <FS.h>
@@ -751,7 +752,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 #ifndef GH_NO_FS
                 if (modules.read(GH_MOD_DELETE)) {
                     GH_FS.remove(name);
-                    GH_rmdir(name);
+                    gyverhub::rmdirRecursive(name);
                     answerFsbr();
                 } else
 #endif
@@ -874,7 +875,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                     return;
                 }
 
-                GH_mkdir_pc(name);
+                gyverhub::mkdirRecursive(name);
                 fs_upload_file = GH_FS.open(name, "w");
                 if (!fs_upload_file) {
                     GH_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (not found)", from);
@@ -910,7 +911,15 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 }
 
                 GH_DEBUG_LOG("Event: GH_UPLOAD_CHUNK from %d", from);
-                GH_B64toFile(fs_upload_file, value);
+                size_t len;
+                uint8_t *data = gyverhub::base64Decode(value, strlen(value), len);
+
+                if (fs_upload_file.write(data, len) != len) {
+                    GH_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (write failed)", from);
+                    fs_upload_file.close();
+                    answerType(F("upload_err"));
+                    return;
+                }
 
                 if (isLast) {
                     GH_DEBUG_LOG("Event: GH_UPLOAD_FINISH from %d", from);
@@ -1004,7 +1013,14 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 }
 
                 GH_DEBUG_LOG("Event: GH_OTA_CHUNK from %d", from);
-                GH_B64toUpdate(value);
+                size_t len;
+                uint8_t *data = gyverhub::base64Decode(value, strlen(value), len);
+                if (Update.write(data, len) != len) {
+                    GH_DEBUG_LOG("Event: GH_OTA_ERROR from %d (Update.write failed)", from);
+                    ota_f = false;
+                    Update.abort();
+                    answerType(F("ota_err"));
+                }
 
                 if (isLast) {
                     GH_DEBUG_LOG("Event: GH_OTA_FINISH from %d", from);
@@ -1438,8 +1454,27 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         answ.itemInteger(F("chunk"), dwn_chunk_count);
         answ.itemInteger(F("amount"), dwn_chunk_amount);
         answ += F("\"data\":\"");
-        if (file_b) GH_bytesToB64(file_b, file_b_idx, file_b_size, file_b_pgm, answ);
-        else GH_fileToB64(file_d, answ);
+        if (file_b) {
+            size_t len = min((size_t) file_b_size, (size_t) GH_DOWN_CHUNK_SIZE);
+            size_t out_len;
+            char *b64 = gyverhub::base64Encode(file_b + file_b_idx, len, file_b_pgm, out_len);
+            answ.concat(b64, out_len);
+            free(b64);
+        } else {
+            size_t len = min((size_t) file_d.available(), (size_t) GH_DOWN_CHUNK_SIZE);
+            uint8_t *data = (uint8_t *)malloc(len);
+            len = file_d.read(data, len);
+
+            if (len) {
+                size_t out_len;
+                char *b64 = gyverhub::base64Encode(data, len, false, out_len);
+                free(data);
+                answ.concat(b64, out_len);
+                free(b64);
+            } else {
+                free(data);
+            }
+        }
         answ += '\"';
         answ.end();
         _answer(answ);

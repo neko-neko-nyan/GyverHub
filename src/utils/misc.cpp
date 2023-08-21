@@ -253,78 +253,6 @@ void GH_showFiles(String& answ, const String& path, GH_UNUSED uint8_t levels, ui
 #endif
 }
 
-void GH_fileToB64(File& file, String& str) {
-    int16_t len = 0;
-    uint16_t slen = 0;
-    int val = 0, valb = -6;
-    while (file.available()) {
-        val = (val << 8) + file.read();
-        valb += 8;
-        while (valb >= 0) {
-            str += GH_b64v((val >> valb) & 0x3F);
-            slen++;
-            valb -= 6;
-        }
-        if (++len > GH_DOWN_CHUNK_SIZE) {
-            if (slen % 4 == 0) break;
-        }
-    }
-    if (valb > -6) {
-        str += GH_b64v(((val << 8) >> (valb + 8)) & 0x3F);
-        slen++;
-    }
-    while (slen % 4) {
-        str += '=';
-        slen++;
-    }
-}
-
-void GH_bytesToB64(const uint8_t* bytes, uint32_t& idx, uint32_t& size, bool pgm, String& str) {
-    int16_t len = 0;
-    uint16_t slen = 0;
-    int val = 0, valb = -6;
-    while (idx < size) {
-        uint8_t b = pgm ? pgm_read_byte(&bytes[idx++]) : bytes[idx++];
-        val = (val << 8) + b;
-        valb += 8;
-        while (valb >= 0) {
-            str += GH_b64v((val >> valb) & 0x3F);
-            slen++;
-            valb -= 6;
-        }
-        if (++len > GH_DOWN_CHUNK_SIZE) {
-            if (slen % 4 == 0) break;
-        }
-    }
-    if (valb > -6) {
-        str += GH_b64v(((val << 8) >> (valb + 8)) & 0x3F);
-        slen++;
-    }
-    while (slen % 4) {
-        str += '=';
-        slen++;
-    }
-}
-
-void GH_B64toFile(File& file, const char* str) {
-    uint16_t len = strlen(str);
-    if (len < 4) return;
-    int padd = 0;
-    if (str[len - 2] == '=') padd = 2;
-    else if (str[len - 1] == '=') padd = 1;
-
-    int val = 0, valb = -8;
-    for (uint16_t i = 0; i < len - padd; i++) {
-        uint8_t b = GH_b64i(str[i]);
-        val = (val << 6) + b;
-        valb += 6;
-        if (valb >= 0) {
-            file.write(uint8_t((val >> valb) & 0xFF));
-            valb -= 8;
-        }
-    }
-}
-
 static void mkdir_p(char *path) {
     char* ptr = strchr(path, '/');
     while (ptr) {
@@ -368,30 +296,6 @@ void GH_rmdir(const char *path) {
     }
     free(pathStr);
 #endif
-}
-#endif
-
-#ifndef GH_NO_OTA
-void GH_B64toUpdate(const char* str) {
-    uint16_t len = strlen(str);
-    if (len < 4) return;
-    int padd = 0;
-    if (str[len - 2] == '=') padd = 2;
-    else if (str[len - 1] == '=') padd = 1;
-    int blen = ((len + 3) / 4) * 3 - padd;  // byte length
-    uint8_t data[blen];
-
-    int val = 0, valb = -8, idx = 0;
-    for (uint16_t i = 0; i < len - padd; i++) {
-        uint8_t b = GH_b64i(str[i]);
-        val = (val << 6) + b;
-        valb += 6;
-        if (valb >= 0) {
-            data[idx++] = (uint8_t)((val >> valb) & 0xFF);
-            valb -= 8;
-        }
-    }
-    Update.write(data, blen);
 }
 #endif
 #endif
