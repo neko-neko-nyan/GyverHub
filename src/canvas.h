@@ -8,7 +8,7 @@
 
 #include "macro.hpp"
 #include "utils/misc.h"
-#include "utils/json.h"
+#include "utils2/json.h"
 
 enum GHmode_t {
     CV_BUTT,
@@ -55,10 +55,10 @@ class GHcanvas {
     }
 
     // буфер
-    GHJson buf;
+    gyverhub::Json buf;
 
     // подключить внешний буфер
-    void extBuffer(String* sptr) {
+    void extBuffer(gyverhub::Json* sptr) {
         ps = sptr;
     }
 
@@ -577,7 +577,7 @@ class GHcanvas {
         _div();
         _dquot();
         //_add(text);
-        if (ps) GH_addEsc(ps, text.c_str());
+        if (ps) ps->appendEscaped(text.c_str());
         _dquot();
         _comma();
         _params(3, x, y, w);
@@ -590,7 +590,7 @@ class GHcanvas {
         _div();
         _dquot();
         //_add(text);
-        if (ps) GH_addEsc(ps, text.c_str());
+        if (ps) ps->appendEscaped(text.c_str());
         _dquot();
         _comma();
         _params(3, x, y, w);
@@ -687,7 +687,7 @@ class GHcanvas {
         _dquot();
     }
 
-    String* ps = nullptr;
+    gyverhub::Json* ps = nullptr;
     bool first = 1;
     bool strokeF = 1;
     bool fillF = 1;

@@ -61,7 +61,7 @@ void GHtypeFromStr(const char* str, void* var, GHdata_t type) {
     }
 }
 
-void GHtypeToStr(String* s, void* var, GHdata_t type) {
+void GHtypeToStr(gyverhub::Json* s, void* var, GHdata_t type) {
     if (!var) {
         *s += '0';
         return;
@@ -69,11 +69,11 @@ void GHtypeToStr(String* s, void* var, GHdata_t type) {
     switch (type) {
         case GH_STR:
             //*s += *(String*)var;
-            GH_addEsc(s, ((String*)var)->c_str());
+            s->appendEscaped(((String*)var)->c_str());
             break;
         case GH_CSTR:
             //*s += (char*)var;
-            GH_addEsc(s, var);
+            s->appendEscaped((char*) var);
             break;
 
         case GH_BOOL:

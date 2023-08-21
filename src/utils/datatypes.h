@@ -7,6 +7,7 @@
 #include "flags.h"
 #include "pos.h"
 #include "misc.h"
+#include "utils2/json.h"
 
 enum GHdata_t {
     GH_NULL,
@@ -30,5 +31,5 @@ enum GHdata_t {
     GH_POS,
 };
 
-void GHtypeToStr(String* s, void* val, GHdata_t type);
+void GHtypeToStr(gyverhub::Json* s, void* val, GHdata_t type);
 void GHtypeFromStr(const char* s, void* val, GHdata_t type);

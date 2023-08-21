@@ -19,7 +19,7 @@
 #include "utils/stats.h"
 #include "utils2/base64.h"
 #include "utils/timer.h"
-#include "utils/json.h"
+#include "utils2/json.h"
 #include "utils2/files.h"
 
 #ifdef GH_ESP_BUILD
@@ -213,9 +213,9 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     void addInfo(const String& label, const String& text) {
         if (sptr) {
             *sptr += '\"';
-            GH_addEsc(sptr, label.c_str());  //*sptr += label;
+            sptr->appendEscaped(label.c_str());
             *sptr += F("\":\"");
-            GH_addEsc(sptr, text.c_str());  //*sptr += text;
+            sptr->appendEscaped(text.c_str());
             *sptr += F("\",");
         }
     }
@@ -230,7 +230,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     // отправить текст в веб-консоль. Опционально цвет
     void print(const String& str, uint32_t color = GH_DEFAULT) {
         if (!focused()) return;
-        GHJson answ;
+        gyverhub::Json answ;
         answ.begin();
         answ.appendId(id);
         answ.itemString(F("type"), F("print"));
@@ -348,14 +348,14 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
     // ответить клиенту. Вызывать в обработчике onData (см. GyverHub.js API)
     void answer(const String& data) {
-        GHJson answ;
+        gyverhub::Json answ;
         _datasend(answ, data);
         _answer(answ);
     }
 
     // отправить сырые данные вручную (см. GyverHub.js API)
     void send(const String& data) {
-        GHJson answ;
+        gyverhub::Json answ;
         _datasend(answ, data);
         _send(answ);
     }
@@ -365,7 +365,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     void sendPush(const String& text) {
         if (!running_f) return;
         upd_f = 1;
-        GHJson answ;
+        gyverhub::Json answ;
         answ.begin();
         answ.appendId(id);
         answ.itemString(F("type"), F("push"));
@@ -378,7 +378,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     void sendNotice(const String& text, uint32_t color = GH_GREEN) {
         if (!running_f || !focused()) return;
         upd_f = 1;
-        GHJson answ;
+        gyverhub::Json answ;
         answ.begin();
         answ.appendId(id);
         answ.itemString(F("type"), F("notice"));
@@ -392,7 +392,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     void sendAlert(const String& text) {
         if (!running_f || !focused()) return;
         upd_f = 1;
-        GHJson answ;
+        gyverhub::Json answ;
         answ.begin();
         answ.appendId(id);
         answ.itemString(F("type"), F("alert"));
@@ -414,7 +414,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         GHbuild build(GH_BUILD_READ);
         bptr = &build;
 
-        GHJson answ;
+        gyverhub::Json answ;
         sptr = &answ;
         _updateBegin(answ);
 
@@ -443,7 +443,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         autoUpd_f = f;
     }
 
-    void _updateBegin(GHJson& answ) {
+    void _updateBegin(gyverhub::Json& answ) {
         upd_f = 1;
         answ.begin();
         answ.appendId(id);
@@ -453,7 +453,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     }
     void _sendUpdate(const char* name, const char* value) {
         if (!running_f || !focused()) return;
-        GHJson answ;
+        gyverhub::Json answ;
         _updateBegin(answ);
         answ.itemString(name, value);
         answ += '}';
@@ -465,7 +465,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     // отправить холст
     void sendCanvas(const String& name, GHcanvas& cv) {
         if (!running_f) return;
-        GHJson answ;
+        gyverhub::Json answ;
         _updateBegin(answ);
         answ.key(name.c_str());
         answ += '[';
@@ -522,7 +522,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         GHbuild build(GH_BUILD_READ);
         bptr = &build;
 
-        String value;
+        gyverhub::Json value;
         sptr = &value;
 
         char* str = (char*)name.c_str();
@@ -1174,13 +1174,13 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
             case GH_COUNT:
                 buf_count += sptr->length();
-                *sptr = "";
+                sptr->clear();
                 break;
 
             case GH_CHUNKED:
                 if (sptr->length() >= buf_size) {
                     _answer(*sptr, false);
-                    *sptr = "";
+                    sptr->clear();
                 }
                 break;
         }
@@ -1227,7 +1227,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
     // ======================= INFO ========================
     void answerInfo() {
-        GHJson answ;
+        gyverhub::Json answ;
         answ.reserve(250);
         answ.begin();
         answ.appendId(id);
@@ -1289,7 +1289,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         answ.end();
         _answer(answ);
     }
-    void checkEndInfo(String& answ, GHinfo_t info) {
+    void checkEndInfo(gyverhub::Json& answ, GHinfo_t info) {
         if (info_cb) {
             sptr = &answ;
             info_cb(info);
@@ -1316,13 +1316,13 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
             build.action.count = 0;
             buf_mode = GH_COUNT;
             buf_count = 0;
-            String count;
+            gyverhub::Json count;
             sptr = &count;
             tab_width = 0;
             build_cb();
         }
 
-        GHJson answ;
+        gyverhub::Json answ;
         answ.reserve((chunked ? buf_size : buf_count) + 100);
         answ.begin();
         answ.key(F("controls"));
@@ -1348,7 +1348,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     // ======================= TYPE ========================
     void answerType(FSTR type = nullptr) {
         if (!type) type = F("OK");
-        GHJson answ;
+        gyverhub::Json answ;
         answ.reserve(50);
         answ.begin();
         answ.appendId(id);
@@ -1357,7 +1357,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         _answer(answ);
     }
     void answerErr(FSTR err) {
-        GHJson answ;
+        gyverhub::Json answ;
         answ.reserve(50);
         answ.begin();
         answ.appendId(id);
@@ -1374,7 +1374,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     void answerFsbr() {
 #ifdef GH_ESP_BUILD
 #ifndef GH_NO_FS
-        GHJson answ;
+        gyverhub::Json answ;
         answ.reserve(100);
         
         uint16_t count = 0;
@@ -1422,7 +1422,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
             }
         }
 
-        GHJson answ;
+        gyverhub::Json answ;
         answ.reserve(120);
         answ.begin();
         answ.appendId(id);
@@ -1446,7 +1446,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     void answerChunk() {
 #ifdef GH_ESP_BUILD
 #ifndef GH_NO_FS
-        GHJson answ;
+        gyverhub::Json answ;
         answ.reserve(GH_DOWN_CHUNK_SIZE + 100);
         answ.begin();
         answ.appendId(id);
@@ -1533,7 +1533,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         if (focus_arr[GH_MQTT] || broadcast) sendMQTT(answ);
 #endif
     }
-    void _datasend(GHJson& answ, const String& data) {
+    void _datasend(gyverhub::Json& answ, const String& data) {
         answ_f = 1;
         answ.begin();
         answ.appendId(id);

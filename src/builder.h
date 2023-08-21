@@ -11,6 +11,7 @@
 #include "utils/log.h"
 #include "utils/misc.h"
 #include "utils/pos.h"
+#include "utils2/json.h"
 
 #define GH_ROW(h) h.BeginRow();
 #define GH_ROW_END(h) h.EndRow();
@@ -149,7 +150,7 @@ class HubBuilder {
             _tabw();
             _end();
         } else if (_isRead()) {
-            if (_checkName(name, fstr)) GH_addEsc(sptr, value.c_str(), 0);
+            if (_checkName(name, fstr)) sptr->appendEscaped(value.c_str(), 0);
         }
     }
 
@@ -236,7 +237,7 @@ class HubBuilder {
             _tabw();
             _end();
         } else if (_isRead()) {
-            if (_checkName(name, fstr)) GH_addEsc(sptr, value, fstr);
+            if (_checkName(name, fstr)) sptr->appendEscaped(value, fstr);
         }
     }
 
@@ -274,7 +275,7 @@ class HubBuilder {
             _tabw();
             _end();
         } else if (_isRead()) {
-            if (_checkName(name, fstr)) GH_addEsc(sptr, value, fstr);
+            if (_checkName(name, fstr)) sptr->appendEscaped(value, fstr);
         }
     }
 
@@ -306,7 +307,7 @@ class HubBuilder {
             _tabw();
             _end();
         } else if (_isRead()) {
-            if (_checkName(name, fstr)) GH_addEsc(sptr, value, fstr);
+            if (_checkName(name, fstr)) sptr->appendEscaped(value, fstr);
         }
     }
 
@@ -374,7 +375,7 @@ class HubBuilder {
             _label(label, fstr);
             if (maxv) _maxv((long)maxv);
             _add(F(",\"regex\":\""));
-            GH_addEsc(sptr, regex, fstr);
+            sptr->appendEscaped(regex, fstr);
             _quot();
             _color(color);
             _tabw();
@@ -1061,7 +1062,7 @@ class HubBuilder {
 
     // ======================== PROTECTED ========================
    protected:
-    String* sptr = nullptr;
+    gyverhub::Json* sptr = nullptr;
     GHbuild* bptr = nullptr;
     virtual void _afterComponent() = 0;
     virtual void refresh() = 0;
@@ -1132,7 +1133,7 @@ class HubBuilder {
     void _value(VSPTR value, bool fstr) {
         _value();
         _quot();
-        GH_addEsc(sptr, value, fstr);  //_add(value, fstr);
+        sptr->appendEscaped(value, fstr);  //_add(value, fstr);
         _quot();
     }
     void _name(VSPTR name, bool fstr) {
@@ -1146,7 +1147,7 @@ class HubBuilder {
     }
     void _label(VSPTR label, bool fstr) {
         _add(F(",\"label\":\""));
-        GH_addEsc(sptr, label, fstr);  //_add(label, fstr);
+        sptr->appendEscaped(label, fstr);  //_add(label, fstr);
         _quot();
     }
     void _text() {
@@ -1155,7 +1156,7 @@ class HubBuilder {
     void _text(VSPTR text, bool fstr) {
         _text();
         _quot();
-        GH_addEsc(sptr, text, fstr);  //_add(text, fstr);
+        sptr->appendEscaped(text, fstr);  //_add(text, fstr);
         _quot();
     }
 
