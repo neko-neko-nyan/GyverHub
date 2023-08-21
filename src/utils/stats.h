@@ -24,11 +24,12 @@ enum GHconn_t {
     GH_WS,
     GH_HTTP,
     GH_MQTT,
+    GH_MANUAL,
     GH_SYSTEM,
-    GH_MANUAL2,
 };
 
-#define GH_CONN_AMOUNT 5
+#define GH_CONN_AMOUNT 6
+
 
 // системные события
 enum GHevent_t {
