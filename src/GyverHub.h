@@ -702,7 +702,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                     return;
 #endif
                 default:
-                    GH_DEBUG_LOG("Event: GH_UNKNOWN from %d (size == 4, cmdn == %d)", from, cmdn);
+                    GH_DEBUG_LOG("Event: GH_UNKNOWN from %d (size == 4, cmdn == %d)", from, (int) cmdn);
                     return;
             }
         }
@@ -1075,6 +1075,9 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 #endif
             }
 #endif
+            default:
+                GH_DEBUG_LOG("Event: GH_UNKNOWN from %d (size == 5, cmdn == %d)", from, (int) cmdn);
+                return;
         }
     }
 
