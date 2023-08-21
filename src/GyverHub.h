@@ -757,7 +757,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 answerDsbl();
                 return sendEvent(GH_RENAME, from);
 
-            case 12:  // fetch
+            case 12: { // fetch
 #ifdef GH_NO_FS
                 answerDsbl();
                 return sendEvent(GH_FETCH_ERROR, from);
@@ -789,6 +789,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 answerType(F("fetch_start"));
                 return sendEvent(GH_FETCH, from);
 #endif
+            }
 
             case 13:  // fetch_chunk
 #ifdef GH_NO_FS
@@ -859,7 +860,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 return sendEvent(GH_UPLOAD, from);
 #endif
 
-            case 16:  // upload_chunk
+            case 16: { // upload_chunk
 #ifdef GH_NO_FS
                 answerDsbl();
                 return sendEvent(GH_UPLOAD_ERROR, from);
@@ -887,8 +888,8 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                     sendEvent(GH_UPLOAD_CHUNK, from);
                 }
                 return;
-                
 #endif
+            }
 
             case 17: { // ota
 #ifdef GH_NO_OTA
@@ -1509,7 +1510,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     bool ota_f = false;
     uint16_t ota_tmr = 0;
     GHclient ota_client;
-#endif`
+#endif
 #ifndef GH_NO_FS
     bool fs_mounted = 0;
     // upload
