@@ -1,4 +1,4 @@
-#include "pos_geo.h"
+#include "pos.h"
 
 int16_t GHdist(int16_t x0, int16_t y0, int16_t x1, int16_t y1) {
     x1 -= x0;

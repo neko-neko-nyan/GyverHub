@@ -8,9 +8,9 @@
 #include "ui/button.h"
 #include "ui/color.h"
 #include "utils/datatypes.h"
-#include "utils/log.h"
+#include "ui/log.h"
 #include "utils/misc.h"
-#include "utils/pos.h"
+#include "ui/pos.h"
 #include "utils2/json.h"
 
 #define GH_ROW(h) h.BeginRow();
@@ -662,24 +662,29 @@ class HubBuilder {
     }
 
     // ========================== FLAGS ==========================
-    bool Flags_(FSTR name, GHflags* var = nullptr, FSTR text = nullptr, FSTR label = nullptr, uint32_t color = GH_DEFAULT) {
+    template<size_t N>
+    bool Flags_(FSTR name, GHflags<N>* var = nullptr, FSTR text = nullptr, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _flags(true, name, var, text, label, color);
     }
-    bool Flags_(CSREF name, GHflags* var = nullptr, CSREF text = "", CSREF label = "", uint32_t color = GH_DEFAULT) {
+    template<size_t N>
+    bool Flags_(CSREF name, GHflags<N>* var = nullptr, CSREF text = "", CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _flags(false, name.c_str(), var, text.c_str(), label.c_str(), color);
     }
 
-    bool Flags(GHflags* var = nullptr) {
+    template<size_t N>
+    bool Flags(GHflags<N>* var = nullptr) {
         return Flags_(0, var);
     }
-    bool Flags(GHflags* var, FSTR text, FSTR label = nullptr, uint32_t color = GH_DEFAULT) {
+    template<size_t N>
+    bool Flags(GHflags<N>* var, FSTR text, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Flags_(0, var, text, label, color);
     }
-    bool Flags(GHflags* var, CSREF text, CSREF label = "", uint32_t color = GH_DEFAULT) {
+    template<size_t N>
+    bool Flags(GHflags<N>* var, CSREF text, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Flags_("", var, text.c_str(), label.c_str(), color);
     }
 
-    bool _flags(bool fstr, VSPTR name, GHflags* var, VSPTR text, VSPTR label, uint32_t color) {
+    bool _flags(bool fstr, VSPTR name, void* var, VSPTR text, VSPTR label, gyverhub::Color color) {
         if (_nameAuto(name, fstr)) name = nullptr;
         if (_isUI()) {
             _begin(F("flags"));

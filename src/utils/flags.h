@@ -1,27 +1,22 @@
 #pragma once
 #include <Arduino.h>
+#include <bitset>
 
-struct GHflags {
-    uint16_t flags = 0;
-
-    GHflags() {}
+template<size_t N>
+class GHflags : public std::bitset<N> {
+public:
+    GHflags() : std::bitset<N>() {}
     GHflags(const GHflags& f) = default;
-    GHflags(uint16_t nflags) {
-        flags = nflags;
-    }
+    GHflags(uint16_t nflags) : std::bitset<N>((unsigned long) nflags) {}
 
-    void set(uint8_t idx, uint8_t val) {
-        if (idx < 16) bitWrite(flags, idx, val);
-    }
-    uint8_t get(uint8_t idx) {
-        if (idx < 16) return bitRead(flags, idx);
-        else return 0;
+    constexpr bool get(size_t idx) const noexcept {
+        return this->test(idx);
     }
 
     String toString() {
         String s;
-        s.reserve(16);
-        for (int i = 0; i < 16; i++) s += get(i);
+        s.reserve(N);
+        for (size_t i = 0; i < N; i++) s += this->test(i);
         return s;
     }
 };

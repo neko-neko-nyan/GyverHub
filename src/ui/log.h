@@ -1,7 +1,7 @@
 #pragma once
 #include <Print.h>
 
-#include "misc.h"
+#include "utils/misc.h"
 
 class GHlog : public Print {
    public:
@@ -17,7 +17,6 @@ class GHlog : public Print {
         end();
     }
 
-    // остановить
     void end() {
         if (buffer) {
             delete[] buffer;
@@ -32,7 +31,15 @@ class GHlog : public Print {
         return 1;
     }
 
-    // прочитать в строку
+    // virtual size_t write(const uint8_t *buffer, size_t size) {
+
+    // }
+
+    void clear() {
+        len = head = 0;
+        _write('\n');
+    }
+
     void read(String* s, bool esc = false) {
         if (!buffer) return;
         bool start = 0;
@@ -47,37 +54,6 @@ class GHlog : public Print {
         }
     }
 
-    // прочитать строкой
-    String read() {
-        String s;
-        s.reserve(len);
-        read(&s);
-        return s;
-    }
-
-    // очистить
-    void clear() {
-        len = head = 0;
-        _write('\n');
-    }
-
-    // есть данные
-    bool available() {
-        return (buffer && len);
-    }
-
-    // запущен
-    bool state() {
-        return buffer;
-    }
-
-    // длина
-    int length() {
-        return len;
-    }
-
-    char* buffer = nullptr;
-
    private:
     void _write(uint8_t n) {
         if (n == '\r') return;
@@ -89,6 +65,7 @@ class GHlog : public Print {
         return buffer[(len < size) ? num : ((head + num) % size)];
     }
 
+    char* buffer = nullptr;
     uint16_t size = 0;
     uint16_t len = 0;
     uint16_t head = 0;

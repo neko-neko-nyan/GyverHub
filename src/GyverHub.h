@@ -12,7 +12,7 @@
 #include "ui/color.h"
 #include "utils/datatypes.h"
 #include "utils/flags.h"
-#include "utils/log.h"
+#include "ui/log.h"
 #include "utils/misc.h"
 #include "utils/modules.h"
 #include "utils/stats.h"
