@@ -1,6 +1,5 @@
 #include "misc.h"
-
-String _GH_empty_str;
+#include "GyverHub.h"
 
 char* GH_splitter(char* list, char div) {
     static uint8_t prev, end;
@@ -19,19 +18,6 @@ char* GH_splitter(char* list, char div) {
         }
     }
     return NULL;
-}
-String GH_listIdx(const String& li, int idx, char div) {
-    int cnt = 0, p = 0, i = 0;
-    while (1) {
-        if (li[i] == div || !li[i]) {
-            if (cnt == idx) return li.substring(p, i);
-            if (!li[i]) return _GH_empty_str;
-            cnt++;
-            p = i + 1;
-        }
-        i++;
-    }
-    return _GH_empty_str;
 }
 
 // ========================== FS ==========================

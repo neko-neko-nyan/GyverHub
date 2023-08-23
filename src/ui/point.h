@@ -98,20 +98,3 @@ namespace gyverhub {
         }
     };
 }
-
-
-class GHpos {
-   public:
-    GHpos() {}
-    GHpos(int16_t nx, int16_t ny, bool nc = 0) : x(nx), y(ny), _changed(nc) {}
-
-    bool changed() {
-        return _changed ? (_changed = 0, 1) : 0;
-    }
-
-    // координаты
-    int16_t x = 0;
-    int16_t y = 0;
-
-    bool _changed = 0;
-};

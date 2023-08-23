@@ -16,18 +16,10 @@ struct GHclient {
     // id клиента
     char id[9] = {'\0'};
 
-    // id как String
-    String idString() {
-        return id;
-    }
-
-    bool eq(GHclient& client) {
-        return (client.from == from && !strcmp(client.id, id));
-    }
     bool operator==(GHclient& client) {
-        return eq(client);
+        return client.from == from && strcmp(client.id, id) == 0;
     }
     bool operator!=(GHclient& client) {
-        return !eq(client);
+        return !(*this == client);
     }
 };

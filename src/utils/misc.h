@@ -51,11 +51,6 @@ struct GHparser {
 };
 
 char* GH_splitter(char* list, char div = ',');
-String GH_listIdx(const String& li, int idx, char div = ',');
 
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_FS
 void GH_listDir(String& str, const String& path = "/", char div = ',');
 void GH_showFiles(String& answ, const String& path, GH_UNUSED uint8_t levels = 0, uint16_t* count = nullptr);
-#endif
-#endif
