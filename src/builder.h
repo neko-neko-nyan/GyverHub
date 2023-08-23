@@ -5,7 +5,7 @@
 #include "config.hpp"
 #include "macro.hpp"
 #include "utils/build.h"
-#include "utils/button.h"
+#include "ui/button.h"
 #include "ui/color.h"
 #include "utils/datatypes.h"
 #include "utils/log.h"
@@ -68,39 +68,39 @@ class HubBuilder {
     }
 
     // ========================== BUTTON ==========================
-    bool Button_(FSTR name, GHbutton* var = nullptr, FSTR label = nullptr, uint32_t color = GH_DEFAULT, int size = 20) {
+    bool Button_(FSTR name, gyverhub::Button* var = nullptr, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int size = 20) {
         return _button(true, F("button"), name, var, label, color, size);
     }
-    bool Button_(CSREF name, GHbutton* var = nullptr, CSREF label = "", uint32_t color = GH_DEFAULT, int size = 20) {
+    bool Button_(CSREF name, gyverhub::Button* var = nullptr, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int size = 20) {
         return _button(false, F("button"), name.c_str(), var, label.c_str(), color, size);
     }
-    bool Button(GHbutton* var = nullptr) {
+    bool Button(gyverhub::Button* var = nullptr) {
         return Button_(0, var);
     }
-    bool Button(GHbutton* var, FSTR label, uint32_t color = GH_DEFAULT, int size = 20) {
+    bool Button(gyverhub::Button* var, FSTR label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int size = 20) {
         return Button_(0, var, label, color, size);
     }
-    bool Button(GHbutton* var, CSREF label, uint32_t color = GH_DEFAULT, int size = 20) {
+    bool Button(gyverhub::Button* var, CSREF label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int size = 20) {
         return Button_("", var, label.c_str(), color, size);
     }
 
-    bool ButtonIcon_(FSTR name, GHbutton* var = nullptr, FSTR label = nullptr, uint32_t color = GH_DEFAULT, int size = 50) {
+    bool ButtonIcon_(FSTR name, gyverhub::Button* var = nullptr, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int size = 50) {
         return _button(true, F("button_i"), name, var, label, color, size);
     }
-    bool ButtonIcon_(CSREF name, GHbutton* var = nullptr, CSREF label = "", uint32_t color = GH_DEFAULT, int size = 50) {
+    bool ButtonIcon_(CSREF name, gyverhub::Button* var = nullptr, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int size = 50) {
         return _button(false, F("button_i"), name.c_str(), var, label.c_str(), color, size);
     }
-    bool ButtonIcon(GHbutton* var = nullptr) {
+    bool ButtonIcon(gyverhub::Button* var = nullptr) {
         return ButtonIcon_(0, var);
     }
-    bool ButtonIcon(GHbutton* var, FSTR label, uint32_t color = GH_DEFAULT, int size = 50) {
+    bool ButtonIcon(gyverhub::Button* var, FSTR label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int size = 50) {
         return ButtonIcon_(0, var, label, color, size);
     }
-    bool ButtonIcon(GHbutton* var, CSREF label, uint32_t color = GH_DEFAULT, int size = 50) {
+    bool ButtonIcon(gyverhub::Button* var, CSREF label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int size = 50) {
         return ButtonIcon_("", var, label.c_str(), color, size);
     }
 
-    bool _button(bool fstr, FSTR tag, VSPTR name, GHbutton* var, VSPTR label, uint32_t color, int size) {
+    bool _button(bool fstr, FSTR tag, VSPTR name, gyverhub::Button* var, VSPTR label, gyverhub::Color color, int size) {
         if (_nameAuto(name, fstr)) name = nullptr;
         if (_isUI()) {
             _begin(tag);
@@ -110,12 +110,10 @@ class HubBuilder {
             _size(size);
             _tabw();
             _end();
-        } else if (bptr->type == GH_BUILD_ACTION) {
-            bool act = bptr->parse(name, &(var->state), GH_BOOL, fstr);
-            if (!act) return 0;
-            bool click = bptr->action.value[0] == '2';
-            if (var && !click) var->_changed = 1;
-            return click;
+        } else if (bptr->type == GH_BUILD_ACTION && bptr->nameEq(name, fstr)) {
+            bptr->type = GH_BUILD_NONE;
+            var->value = bptr->value[0];
+            return var->clicked();
         }
         return 0;
     }
