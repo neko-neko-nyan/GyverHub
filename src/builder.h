@@ -6,7 +6,7 @@
 #include "macro.hpp"
 #include "utils/build.h"
 #include "utils/button.h"
-#include "utils/color.h"
+#include "ui/color.h"
 #include "utils/datatypes.h"
 #include "utils/log.h"
 #include "utils/misc.h"
@@ -121,24 +121,24 @@ class HubBuilder {
     }
 
     // ========================== LABEL ==========================
-    void Label_(FSTR name, CSREF value = "", FSTR label = nullptr, uint32_t color = GH_DEFAULT, int size = 40) {
+    void Label_(FSTR name, CSREF value = "", FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int size = 40) {
         _label(true, name, value, label, color, size);
     }
-    void Label_(CSREF name, CSREF value = "", CSREF label = "", uint32_t color = GH_DEFAULT, int size = 40) {
+    void Label_(CSREF name, CSREF value = "", CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int size = 40) {
         _label(false, name.c_str(), value, label.c_str(), color, size);
     }
 
     void Label(CSREF value = "") {
         Label_(0, value);
     }
-    void Label(CSREF value, FSTR label, uint32_t color = GH_DEFAULT, int size = 40) {
+    void Label(CSREF value, FSTR label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int size = 40) {
         Label_(0, value, label, color, size);
     }
-    void Label(CSREF value, CSREF label, uint32_t color = GH_DEFAULT, int size = 40) {
+    void Label(CSREF value, CSREF label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int size = 40) {
         Label_("", value, label.c_str(), color, size);
     }
 
-    void _label(bool fstr, VSPTR name, CSREF value, VSPTR label, uint32_t color, int size) {
+    void _label(bool fstr, VSPTR name, CSREF value, VSPTR label, gyverhub::Color color, int size) {
         if (_nameAuto(name, fstr)) name = nullptr;
         if (_isUI()) {
             _begin(F("label"));
@@ -206,24 +206,24 @@ class HubBuilder {
     }
 
     // ========================== DISPLAY ==========================
-    void Display_(FSTR name, FSTR value = nullptr, FSTR label = nullptr, uint32_t color = GH_DEFAULT, int rows = 2, int size = 40) {
+    void Display_(FSTR name, FSTR value = nullptr, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int rows = 2, int size = 40) {
         _display(true, name, value, label, color, rows, size);
     }
-    void Display_(CSREF name, CSREF value = "", CSREF label = "", uint32_t color = GH_DEFAULT, int rows = 2, int size = 40) {
+    void Display_(CSREF name, CSREF value = "", CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int rows = 2, int size = 40) {
         _display(false, name.c_str(), value.c_str(), label.c_str(), color, rows, size);
     }
 
     void Display() {
         Display_(0);
     }
-    void Display(FSTR value, FSTR label = nullptr, uint32_t color = GH_DEFAULT, int rows = 2, int size = 40) {
+    void Display(FSTR value, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int rows = 2, int size = 40) {
         Display_(0, value, label, color, rows, size);
     }
-    void Display(CSREF value, CSREF label = "", uint32_t color = GH_DEFAULT, int rows = 2, int size = 40) {
+    void Display(CSREF value, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT, int rows = 2, int size = 40) {
         Display_("", value.c_str(), label.c_str(), color, rows, size);
     }
 
-    void _display(bool fstr, VSPTR name, VSPTR value, VSPTR label, uint32_t color, int rows, int size) {
+    void _display(bool fstr, VSPTR name, VSPTR value, VSPTR label, gyverhub::Color color, int rows, int size) {
         if (_nameAuto(name, fstr)) name = nullptr;
         if (_isUI()) {
             _begin(F("display"));
@@ -328,42 +328,42 @@ class HubBuilder {
     }
 
     // ========================== INPUT ==========================
-    bool Input_(FSTR name, void* var = nullptr, GHdata_t type = GH_NULL, FSTR label = nullptr, int maxv = 0, FSTR regex = nullptr, uint32_t color = GH_DEFAULT) {
+    bool Input_(FSTR name, void* var = nullptr, GHdata_t type = GH_NULL, FSTR label = nullptr, int maxv = 0, FSTR regex = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _input(true, F("input"), name, var, type, label, maxv, regex, color);
     }
-    bool Input_(CSREF name, void* var = nullptr, GHdata_t type = GH_NULL, CSREF label = "", int maxv = 0, CSREF regex = "", uint32_t color = GH_DEFAULT) {
+    bool Input_(CSREF name, void* var = nullptr, GHdata_t type = GH_NULL, CSREF label = "", int maxv = 0, CSREF regex = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _input(false, F("input"), name.c_str(), var, type, label.c_str(), maxv, regex.c_str(), color);
     }
 
     bool Input(void* var = nullptr, GHdata_t type = GH_NULL) {
         return Input_(0, var, type);
     }
-    bool Input(void* var, GHdata_t type, FSTR label, int maxv = 0, FSTR regex = nullptr, uint32_t color = GH_DEFAULT) {
+    bool Input(void* var, GHdata_t type, FSTR label, int maxv = 0, FSTR regex = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Input_(0, var, type, label, maxv, regex, color);
     }
-    bool Input(void* var, GHdata_t type, CSREF label, int maxv = 0, CSREF regex = "", uint32_t color = GH_DEFAULT) {
+    bool Input(void* var, GHdata_t type, CSREF label, int maxv = 0, CSREF regex = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Input_("", var, type, label.c_str(), maxv, regex.c_str(), color);
     }
 
     // ========================== PASS ==========================
-    bool Pass_(FSTR name, void* var = nullptr, GHdata_t type = GH_NULL, FSTR label = nullptr, int maxv = 0, uint32_t color = GH_DEFAULT) {
+    bool Pass_(FSTR name, void* var = nullptr, GHdata_t type = GH_NULL, FSTR label = nullptr, int maxv = 0, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _input(true, F("pass"), name, var, type, label, maxv, nullptr, color);
     }
-    bool Pass_(CSREF name, void* var = nullptr, GHdata_t type = GH_NULL, CSREF label = "", int maxv = 0, uint32_t color = GH_DEFAULT) {
+    bool Pass_(CSREF name, void* var = nullptr, GHdata_t type = GH_NULL, CSREF label = "", int maxv = 0, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _input(false, F("pass"), name.c_str(), var, type, label.c_str(), maxv, "", color);
     }
 
     bool Pass(void* var = nullptr, GHdata_t type = GH_NULL) {
         return Pass_(0, var, type);
     }
-    bool Pass(void* var, GHdata_t type, FSTR label, int maxv = 0, uint32_t color = GH_DEFAULT) {
+    bool Pass(void* var, GHdata_t type, FSTR label, int maxv = 0, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Pass_(0, var, type, label, maxv, color);
     }
-    bool Pass(void* var, GHdata_t type, CSREF label, int maxv = 0, uint32_t color = GH_DEFAULT) {
+    bool Pass(void* var, GHdata_t type, CSREF label, int maxv = 0, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Pass_("", var, type, label.c_str(), maxv, color);
     }
 
-    bool _input(bool fstr, FSTR tag, VSPTR name, void* var, GHdata_t type, VSPTR label, int maxv, VSPTR regex, uint32_t color) {
+    bool _input(bool fstr, FSTR tag, VSPTR name, void* var, GHdata_t type, VSPTR label, int maxv, VSPTR regex, gyverhub::Color color) {
         if (_nameAuto(name, fstr)) name = nullptr;
         if (_isUI()) {
             _begin(tag);
@@ -389,42 +389,42 @@ class HubBuilder {
     }
 
     // ========================== SLIDER ==========================
-    bool Slider_(FSTR name, void* var = nullptr, GHdata_t type = GH_NULL, FSTR label = nullptr, float minv = 0, float maxv = 100, float step = 1, uint32_t color = GH_DEFAULT) {
+    bool Slider_(FSTR name, void* var = nullptr, GHdata_t type = GH_NULL, FSTR label = nullptr, float minv = 0, float maxv = 100, float step = 1, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _spinner(true, F("slider"), name, var, type, label, minv, maxv, step, color);
     }
-    bool Slider_(CSREF name, void* var = nullptr, GHdata_t type = GH_NULL, CSREF label = "", float minv = 0, float maxv = 100, float step = 1, uint32_t color = GH_DEFAULT) {
+    bool Slider_(CSREF name, void* var = nullptr, GHdata_t type = GH_NULL, CSREF label = "", float minv = 0, float maxv = 100, float step = 1, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _spinner(false, F("slider"), name.c_str(), var, type, label.c_str(), minv, maxv, step, color);
     }
 
     bool Slider(void* var = nullptr, GHdata_t type = GH_NULL) {
         return Slider_(0, var, type);
     }
-    bool Slider(void* var, GHdata_t type, FSTR label, float minv = 0, float maxv = 100, float step = 1, uint32_t color = GH_DEFAULT) {
+    bool Slider(void* var, GHdata_t type, FSTR label, float minv = 0, float maxv = 100, float step = 1, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Slider_(0, var, type, label, minv, maxv, step, color);
     }
-    bool Slider(void* var, GHdata_t type, CSREF label, float minv = 0, float maxv = 100, float step = 1, uint32_t color = GH_DEFAULT) {
+    bool Slider(void* var, GHdata_t type, CSREF label, float minv = 0, float maxv = 100, float step = 1, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Slider_("", var, type, label.c_str(), minv, maxv, step, color);
     }
 
     // ========================== SPINNER ==========================
-    bool Spinner_(FSTR name, void* var = nullptr, GHdata_t type = GH_NULL, FSTR label = nullptr, float minv = 0, float maxv = 100, float step = 1, uint32_t color = GH_DEFAULT) {
+    bool Spinner_(FSTR name, void* var = nullptr, GHdata_t type = GH_NULL, FSTR label = nullptr, float minv = 0, float maxv = 100, float step = 1, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _spinner(true, F("spinner"), name, var, type, label, minv, maxv, step, color);
     }
-    bool Spinner_(CSREF name, void* var = nullptr, GHdata_t type = GH_NULL, CSREF label = "", float minv = 0, float maxv = 100, float step = 1, uint32_t color = GH_DEFAULT) {
+    bool Spinner_(CSREF name, void* var = nullptr, GHdata_t type = GH_NULL, CSREF label = "", float minv = 0, float maxv = 100, float step = 1, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _spinner(false, F("spinner"), name.c_str(), var, type, label.c_str(), minv, maxv, step, color);
     }
 
     bool Spinner(void* var = nullptr, GHdata_t type = GH_NULL) {
         return Spinner_(0, var, type);
     }
-    bool Spinner(void* var, GHdata_t type, FSTR label, float minv = 0, float maxv = 100, float step = 1, uint32_t color = GH_DEFAULT) {
+    bool Spinner(void* var, GHdata_t type, FSTR label, float minv = 0, float maxv = 100, float step = 1, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Spinner_(0, var, type, label, minv, maxv, step, color);
     }
-    bool Spinner(void* var, GHdata_t type, CSREF label, float minv = 0, float maxv = 100, float step = 1, uint32_t color = GH_DEFAULT) {
+    bool Spinner(void* var, GHdata_t type, CSREF label, float minv = 0, float maxv = 100, float step = 1, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Spinner_("", var, type, label.c_str(), minv, maxv, step, color);
     }
 
-    bool _spinner(bool fstr, FSTR tag, VSPTR name, void* var, GHdata_t type, VSPTR label, float minv, float maxv, float step, uint32_t color) {
+    bool _spinner(bool fstr, FSTR tag, VSPTR name, void* var, GHdata_t type, VSPTR label, float minv, float maxv, float step, gyverhub::Color color) {
         if (_nameAuto(name, fstr)) name = nullptr;
         if (_isUI()) {
             _begin(tag);
@@ -447,24 +447,24 @@ class HubBuilder {
     }
 
     // ========================== GAUGE ===========================
-    void Gauge_(FSTR name, float value = 0, FSTR text = nullptr, FSTR label = nullptr, float minv = 0, float maxv = 100, float step = 1, uint32_t color = GH_DEFAULT) {
+    void Gauge_(FSTR name, float value = 0, FSTR text = nullptr, FSTR label = nullptr, float minv = 0, float maxv = 100, float step = 1, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         _gauge(true, name, value, text, label, minv, maxv, step, color);
     }
-    void Gauge_(CSREF name, float value = 0, CSREF text = "", CSREF label = "", float minv = 0, float maxv = 100, float step = 1, uint32_t color = GH_DEFAULT) {
+    void Gauge_(CSREF name, float value = 0, CSREF text = "", CSREF label = "", float minv = 0, float maxv = 100, float step = 1, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         _gauge(false, name.c_str(), value, text.c_str(), label.c_str(), minv, maxv, step, color);
     }
 
     void Gauge(float value = 0) {
         Gauge_(0, value);
     }
-    void Gauge(float value, FSTR text, FSTR label = nullptr, float minv = 0, float maxv = 100, float step = 1, uint32_t color = GH_DEFAULT) {
+    void Gauge(float value, FSTR text, FSTR label = nullptr, float minv = 0, float maxv = 100, float step = 1, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         Gauge_(0, value, text, label, minv, maxv, step, color);
     }
-    void Gauge(float value, CSREF text, CSREF label = "", float minv = 0, float maxv = 100, float step = 1, uint32_t color = GH_DEFAULT) {
+    void Gauge(float value, CSREF text, CSREF label = "", float minv = 0, float maxv = 100, float step = 1, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         Gauge_("", value, text.c_str(), label.c_str(), minv, maxv, step, color);
     }
 
-    void _gauge(bool fstr, VSPTR name, float value, VSPTR text, VSPTR label, float minv, float maxv, float step, uint32_t color) {
+    void _gauge(bool fstr, VSPTR name, float value, VSPTR text, VSPTR label, float minv, float maxv, float step, gyverhub::Color color) {
         if (_nameAuto(name, fstr)) name = nullptr;
         if (_isUI()) {
             _begin(F("gauge"));
@@ -486,58 +486,58 @@ class HubBuilder {
     }
 
     // ========================== SWITCH ==========================
-    bool Switch_(FSTR name, bool* var = nullptr, FSTR label = nullptr, uint32_t color = GH_DEFAULT) {
+    bool Switch_(FSTR name, bool* var = nullptr, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _switch(true, F("switch"), name, var, label, color, nullptr);
     }
-    bool Switch_(CSREF name, bool* var = nullptr, CSREF label = "", uint32_t color = GH_DEFAULT) {
+    bool Switch_(CSREF name, bool* var = nullptr, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _switch(false, F("switch"), name.c_str(), var, label.c_str(), color, nullptr);
     }
 
     bool Switch(bool* var = nullptr) {
         return Switch_(0, var);
     }
-    bool Switch(bool* var, FSTR label, uint32_t color = GH_DEFAULT) {
+    bool Switch(bool* var, FSTR label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Switch_(0, var, label, color);
     }
-    bool Switch(bool* var, CSREF label, uint32_t color = GH_DEFAULT) {
+    bool Switch(bool* var, CSREF label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Switch_("", var, label.c_str(), color);
     }
 
-    bool SwitchIcon_(FSTR name, bool* var = nullptr, FSTR label = nullptr, FSTR text = nullptr, uint32_t color = GH_DEFAULT) {
+    bool SwitchIcon_(FSTR name, bool* var = nullptr, FSTR label = nullptr, FSTR text = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _switch(true, F("switch_i"), name, var, label, color, text);
     }
-    bool SwitchIcon_(CSREF name, bool* var = nullptr, CSREF label = "", CSREF text = "", uint32_t color = GH_DEFAULT) {
+    bool SwitchIcon_(CSREF name, bool* var = nullptr, CSREF label = "", CSREF text = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _switch(false, F("switch_i"), name.c_str(), var, label.c_str(), color, text.c_str());
     }
 
     bool SwitchIcon(bool* var = nullptr) {
         return SwitchIcon_(0, var);
     }
-    bool SwitchIcon(bool* var, FSTR label, FSTR text = nullptr, uint32_t color = GH_DEFAULT) {
+    bool SwitchIcon(bool* var, FSTR label, FSTR text = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return SwitchIcon_(0, var, label, text, color);
     }
-    bool SwitchIcon(bool* var, CSREF label, CSREF text = "", uint32_t color = GH_DEFAULT) {
+    bool SwitchIcon(bool* var, CSREF label, CSREF text = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return SwitchIcon_("", var, label.c_str(), text.c_str(), color);
     }
 
-    bool SwitchText_(FSTR name, bool* var = nullptr, FSTR label = nullptr, FSTR text = nullptr, uint32_t color = GH_DEFAULT) {
+    bool SwitchText_(FSTR name, bool* var = nullptr, FSTR label = nullptr, FSTR text = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _switch(true, F("switch_t"), name, var, label, color, text);
     }
-    bool SwitchText_(CSREF name, bool* var = nullptr, CSREF label = "", CSREF text = "", uint32_t color = GH_DEFAULT) {
+    bool SwitchText_(CSREF name, bool* var = nullptr, CSREF label = "", CSREF text = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _switch(false, F("switch_t"), name.c_str(), var, label.c_str(), color, text.c_str());
     }
 
     bool SwitchText(bool* var = nullptr) {
         return SwitchText_(0, var);
     }
-    bool SwitchText(bool* var, FSTR label, FSTR text = nullptr, uint32_t color = GH_DEFAULT) {
+    bool SwitchText(bool* var, FSTR label, FSTR text = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return SwitchText_(0, var, label, text, color);
     }
-    bool SwitchText(bool* var, CSREF label, CSREF text = "", uint32_t color = GH_DEFAULT) {
+    bool SwitchText(bool* var, CSREF label, CSREF text = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return SwitchText_("", var, label.c_str(), text.c_str(), color);
     }
 
-    bool _switch(bool fstr, FSTR tag, VSPTR name, bool* var, VSPTR label, uint32_t color, VSPTR text) {
+    bool _switch(bool fstr, FSTR tag, VSPTR name, bool* var, VSPTR label, gyverhub::Color color, VSPTR text) {
         if (_nameAuto(name, fstr)) name = nullptr;
         if (_isUI()) {
             _begin(tag);
@@ -558,58 +558,58 @@ class HubBuilder {
     }
 
     // ========================== DATETIME ==========================
-    bool Date_(FSTR name, void* var = nullptr, FSTR label = nullptr, uint32_t color = GH_DEFAULT) {
+    bool Date_(FSTR name, void* var = nullptr, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _date(true, F("date"), name, var, label, color);
     }
-    bool Date_(CSREF name, void* var = nullptr, CSREF label = "", uint32_t color = GH_DEFAULT) {
+    bool Date_(CSREF name, void* var = nullptr, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _date(false, F("date"), name.c_str(), var, label.c_str(), color);
     }
 
     bool Date(void* var = nullptr) {
         return Date_(0, var);
     }
-    bool Date(void* var, FSTR label, uint32_t color = GH_DEFAULT) {
+    bool Date(void* var, FSTR label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Date_(0, var, label, color);
     }
-    bool Date(void* var, CSREF label, uint32_t color = GH_DEFAULT) {
+    bool Date(void* var, CSREF label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Date_("", var, label.c_str(), color);
     }
 
-    bool Time_(FSTR name, void* var = nullptr, FSTR label = nullptr, uint32_t color = GH_DEFAULT) {
+    bool Time_(FSTR name, void* var = nullptr, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _date(true, F("time"), name, var, label, color);
     }
-    bool Time_(CSREF name, void* var = nullptr, CSREF label = "", uint32_t color = GH_DEFAULT) {
+    bool Time_(CSREF name, void* var = nullptr, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _date(false, F("time"), name.c_str(), var, label.c_str(), color);
     }
 
     bool Time(void* var = nullptr) {
         return Time_(0, var);
     }
-    bool Time(void* var, FSTR label, uint32_t color = GH_DEFAULT) {
+    bool Time(void* var, FSTR label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Time_(0, var, label, color);
     }
-    bool Time(void* var, CSREF label, uint32_t color = GH_DEFAULT) {
+    bool Time(void* var, CSREF label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Time_("", var, label.c_str(), color);
     }
 
-    bool DateTime_(FSTR name, void* var = nullptr, FSTR label = nullptr, uint32_t color = GH_DEFAULT) {
+    bool DateTime_(FSTR name, void* var = nullptr, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _date(true, F("datetime"), name, var, label, color);
     }
-    bool DateTime_(CSREF name, void* var = nullptr, CSREF label = "", uint32_t color = GH_DEFAULT) {
+    bool DateTime_(CSREF name, void* var = nullptr, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _date(false, F("datetime"), name.c_str(), var, label.c_str(), color);
     }
 
     bool DateTime(void* var = nullptr) {
         return DateTime_(0, var);
     }
-    bool DateTime(void* var, FSTR label, uint32_t color = GH_DEFAULT) {
+    bool DateTime(void* var, FSTR label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return DateTime_(0, var, label, color);
     }
-    bool DateTime(void* var, CSREF label, uint32_t color = GH_DEFAULT) {
+    bool DateTime(void* var, CSREF label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return DateTime_("", var, label.c_str(), color);
     }
 
-    bool _date(bool fstr, FSTR tag, VSPTR name, void* var, VSPTR label, uint32_t color) {
+    bool _date(bool fstr, FSTR tag, VSPTR name, void* var, VSPTR label, gyverhub::Color color) {
         if (_nameAuto(name, fstr)) name = nullptr;
         if (_isUI()) {
             _begin(tag);
@@ -629,21 +629,21 @@ class HubBuilder {
     }
 
     // ========================== SELECT ==========================
-    bool Select_(FSTR name, uint8_t* var, FSTR text, FSTR label = nullptr, uint32_t color = GH_DEFAULT) {
+    bool Select_(FSTR name, uint8_t* var, FSTR text, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _select(true, name, var, text, label, color);
     }
-    bool Select_(CSREF name, uint8_t* var, CSREF text, CSREF label = "", uint32_t color = GH_DEFAULT) {
+    bool Select_(CSREF name, uint8_t* var, CSREF text, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _select(false, name.c_str(), var, text.c_str(), label.c_str(), color);
     }
 
-    bool Select(uint8_t* var, FSTR text, FSTR label = nullptr, uint32_t color = GH_DEFAULT) {
+    bool Select(uint8_t* var, FSTR text, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Select_(0, var, text, label, color);
     }
-    bool Select(uint8_t* var, CSREF text, CSREF label = "", uint32_t color = GH_DEFAULT) {
+    bool Select(uint8_t* var, CSREF text, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Select_("", var, text.c_str(), label.c_str(), color);
     }
 
-    bool _select(bool fstr, VSPTR name, uint8_t* var, VSPTR text, VSPTR label, uint32_t color) {
+    bool _select(bool fstr, VSPTR name, uint8_t* var, VSPTR text, VSPTR label, gyverhub::Color color) {
         if (_nameAuto(name, fstr)) name = nullptr;
         if (_isUI()) {
             _begin(F("select"));
@@ -702,24 +702,24 @@ class HubBuilder {
     }
 
     // ========================== COLOR ==========================
-    bool Color_(FSTR name, GHcolor* var = nullptr, FSTR label = nullptr) {
+    bool Color_(FSTR name, gyverhub::Color* var = nullptr, FSTR label = nullptr) {
         return _color(true, name, var, label);
     }
-    bool Color_(CSREF name, GHcolor* var = nullptr, CSREF label = "") {
+    bool Color_(CSREF name, gyverhub::Color* var = nullptr, CSREF label = "") {
         return _color(false, name.c_str(), var, label.c_str());
     }
 
-    bool Color(GHcolor* var = nullptr) {
+    bool Color(gyverhub::Color* var = nullptr) {
         return Color_(0, var);
     }
-    bool Color(GHcolor* var, FSTR label) {
+    bool Color(gyverhub::Color* var, FSTR label) {
         return Color_(0, var, label);
     }
-    bool Color(GHcolor* var, CSREF label) {
+    bool Color(gyverhub::Color* var, CSREF label) {
         return Color_("", var, label.c_str());
     }
 
-    bool _color(bool fstr, VSPTR name, GHcolor* var, VSPTR label) {
+    bool _color(bool fstr, VSPTR name, gyverhub::Color* var, VSPTR label) {
         if (_nameAuto(name, fstr)) name = nullptr;
         if (_isUI()) {
             _begin(F("color"));
@@ -929,42 +929,42 @@ class HubBuilder {
     }
 
     // =========================== JOY ===========================
-    bool Joystick_(FSTR name, GHpos* pos = nullptr, bool autoc = 1, bool exp = 0, FSTR label = nullptr, uint32_t color = GH_DEFAULT) {
+    bool Joystick_(FSTR name, GHpos* pos = nullptr, bool autoc = 1, bool exp = 0, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _joy(F("joy"), true, name, pos, autoc, exp, label, color);
     }
-    bool Joystick_(CSREF name, GHpos* pos = nullptr, bool autoc = 1, bool exp = 0, CSREF label = "", uint32_t color = GH_DEFAULT) {
+    bool Joystick_(CSREF name, GHpos* pos = nullptr, bool autoc = 1, bool exp = 0, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _joy(F("joy"), false, name.c_str(), pos, autoc, exp, label.c_str(), color);
     }
 
     bool Joystick(GHpos* pos = nullptr, bool autoc = 1, bool exp = 0) {
         return Joystick_(0, pos, autoc, exp);
     }
-    bool Joystick(GHpos* pos, bool autoc, bool exp, FSTR label, uint32_t color = GH_DEFAULT) {
+    bool Joystick(GHpos* pos, bool autoc, bool exp, FSTR label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Joystick_(0, pos, autoc, exp, label, color);
     }
-    bool Joystick(GHpos* pos, bool autoc, bool exp, CSREF label, uint32_t color = GH_DEFAULT) {
+    bool Joystick(GHpos* pos, bool autoc, bool exp, CSREF label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Joystick_("", pos, autoc, exp, label.c_str(), color);
     }
 
     // =========================== DPAD ===========================
-    bool Dpad_(FSTR name, GHpos* pos = nullptr, FSTR label = nullptr, uint32_t color = GH_DEFAULT) {
+    bool Dpad_(FSTR name, GHpos* pos = nullptr, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _joy(F("dpad"), true, name, pos, 0, 0, label, color);
     }
-    bool Dpad_(CSREF name, GHpos* pos = nullptr, CSREF label = "", uint32_t color = GH_DEFAULT) {
+    bool Dpad_(CSREF name, GHpos* pos = nullptr, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _joy(F("dpad"), false, name.c_str(), pos, 0, 0, label.c_str(), color);
     }
 
     bool Dpad(GHpos* pos = nullptr) {
         return Dpad_(0, pos);
     }
-    bool Dpad(GHpos* pos, FSTR label, uint32_t color = GH_DEFAULT) {
+    bool Dpad(GHpos* pos, FSTR label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Dpad_(0, pos, label, color);
     }
-    bool Dpad(GHpos* pos, CSREF label, uint32_t color = GH_DEFAULT) {
+    bool Dpad(GHpos* pos, CSREF label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Dpad_("", pos, label.c_str(), color);
     }
 
-    bool _joy(FSTR tag, bool fstr, VSPTR name, GHpos* pos, bool autoc, bool exp, VSPTR label, uint32_t color) {
+    bool _joy(FSTR tag, bool fstr, VSPTR name, GHpos* pos, bool autoc, bool exp, VSPTR label, gyverhub::Color color) {
         if (_nameAuto(name, fstr)) name = nullptr;
         if (_isUI()) {
             _begin(tag);
@@ -1161,10 +1161,10 @@ class HubBuilder {
     }
 
     // ================
-    void _color(uint32_t& col) {
-        if (col == GH_DEFAULT) return;
+    void _color(gyverhub::Color color) {
+        if (color == gyverhub::Colors::GH_DEFAULT) return;
         _add(F(",\"color\":"));
-        *sptr += col;
+        *sptr += color.toHex();
     }
     void _size(int& val) {
         _add(F(",\"size\":"));

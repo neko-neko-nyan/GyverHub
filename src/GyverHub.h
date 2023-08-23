@@ -9,8 +9,7 @@
 #include "macro.hpp"
 #include "stream.h"
 #include "utils/build.h"
-#include "utils/cmd_p.h"
-#include "utils/color.h"
+#include "ui/color.h"
 #include "utils/datatypes.h"
 #include "utils/flags.h"
 #include "utils/log.h"
@@ -228,14 +227,14 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     }
 
     // отправить текст в веб-консоль. Опционально цвет
-    void print(const String& str, uint32_t color = GH_DEFAULT) {
+    void print(const String& str, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         if (!focused()) return;
         gyverhub::Json answ;
         answ.begin();
         answ.appendId(id);
         answ.itemString(F("type"), F("print"));
         answ.itemString(F("text"), str);
-        answ.itemInteger(F("color"), color);
+        answ.itemInteger(F("color"), color.toHex());
         answ.end();
         _send(answ);
     }
@@ -375,7 +374,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     }
 
     // отправить всплывающее уведомление
-    void sendNotice(const String& text, uint32_t color = GH_GREEN) {
+    void sendNotice(const String& text, gyverhub::Color color = gyverhub::Colors::GH_GREEN) {
         if (!running_f || !focused()) return;
         upd_f = 1;
         gyverhub::Json answ;
@@ -383,7 +382,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         answ.appendId(id);
         answ.itemString(F("type"), F("notice"));
         answ.itemString(F("text"), text);
-        answ.itemInteger(F("color"), color);
+        answ.itemInteger(F("color"), color.toHex());
         answ.end();
         _send(answ);
     }
