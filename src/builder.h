@@ -1073,17 +1073,17 @@ class HubBuilder {
         if (!name) f = 1;
         else if (fstr) f = !pgm_read_byte((uint8_t*)name);
         else f = !(*(uint8_t*)name);
-        if (f) bptr->action.count++;
+        if (f) bptr->count++;
         return f;
     }
     bool _checkName(VSPTR name, bool fstr) {
         if (name) {
-            if (fstr ? (!strcmp_P(bptr->action.name, (PGM_P)name)) : (!strcmp(bptr->action.name, (PGM_P)name))) {
+            if (fstr ? (!strcmp_P(bptr->name, (PGM_P)name)) : (!strcmp(bptr->name, (PGM_P)name))) {
                 bptr->type = GH_BUILD_NONE;
                 return true;
             }
         } else {
-            if (bptr->action.autoNameEq()) {
+            if (bptr->autoNameEq()) {
                 bptr->type = GH_BUILD_NONE;
                 return true;
             }
@@ -1139,7 +1139,7 @@ class HubBuilder {
         if (name) _add(name, fstr);
         else {
             *sptr += F("_n");
-            *sptr += bptr->action.count;
+            *sptr += bptr->count;
         }
         _quot();
     }

@@ -1,5 +1,5 @@
 #pragma once
-#include "../config.hpp"
+#include <cstdint>
 
 // тип info
 enum GHinfo_t {
@@ -113,3 +113,5 @@ enum GHevent_t {
     GH_OTA_ABORTED,
     GH_OTA_FINISH,
 };
+
+GHcommand GH_getCmd(const char* str);

@@ -3,7 +3,7 @@
 
 #include "../config.hpp"
 #include "../macro.hpp"
-#include "color.h"
+#include "ui/color.h"
 #include "flags.h"
 #include "pos.h"
 #include "misc.h"
@@ -32,4 +32,3 @@ enum GHdata_t {
 };
 
 void GHtypeToStr(gyverhub::Json* s, void* val, GHdata_t type);
-void GHtypeFromStr(const char* s, void* val, GHdata_t type);

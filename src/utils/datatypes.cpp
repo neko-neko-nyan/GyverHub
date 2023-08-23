@@ -1,66 +1,5 @@
 #include "datatypes.h"
 
-void GHtypeFromStr(const char* str, void* var, GHdata_t type) {
-    if (!var) return;
-    switch (type) {
-        case GH_STR:
-            *(String*)var = str;
-            break;
-        case GH_CSTR:
-            strcpy((char*)var, str);
-            break;
-
-        case GH_BOOL:
-            *(bool*)var = (str[0] == '1');
-            break;
-
-        case GH_INT8:
-            *(int8_t*)var = atoi(str);
-            break;
-
-        case GH_UINT8:
-            *(uint8_t*)var = atoi(str);
-            break;
-
-        case GH_INT16:
-            *(int16_t*)var = atoi(str);
-            break;
-        case GH_UINT16:
-            *(uint16_t*)var = atoi(str);
-            break;
-
-        case GH_INT32:
-            *(int32_t*)var = atol(str);
-            break;
-        case GH_UINT32:
-            *(uint32_t*)var = atol(str);
-            break;
-
-        case GH_FLOAT:
-            *(float*)var = atof(str);
-            break;
-        case GH_DOUBLE:
-            *(double*)var = atof(str);
-            break;
-
-        case GH_COLOR:
-            ((GHcolor*)var)->setHEX(atol(str));
-            break;
-        case GH_FLAGS:
-            ((GHflags*)var)->flags = atoi(str);
-            break;
-        case GH_POS: {
-            uint32_t xy = atol(str);
-            ((GHpos*)var)->_changed = true;
-            ((GHpos*)var)->x = xy >> 16;
-            ((GHpos*)var)->y = xy & 0xffff;
-        } break;
-
-        case GH_NULL:
-            break;
-    }
-}
-
 void GHtypeToStr(gyverhub::Json* s, void* var, GHdata_t type) {
     if (!var) {
         *s += '0';
@@ -112,10 +51,10 @@ void GHtypeToStr(gyverhub::Json* s, void* var, GHdata_t type) {
             break;
 
         case GH_COLOR:
-            *s += ((GHcolor*)var)->getHEX();
+            *s += ((gyverhub::Color*)var)->toHex();
             break;
         case GH_FLAGS:
-            *s += ((GHflags*)var)->flags;
+            *s += ((GHflags<64>*)var)->to_ullong();
             break;
         case GH_POS:
             break;

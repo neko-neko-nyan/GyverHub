@@ -1,4 +1,5 @@
-#include "cmd_p.h"
+#include "stats.h"
+#include <Arduino.h>
 
 GH_PGM(_GH_CMD0, "focus");
 GH_PGM(_GH_CMD1, "ping");

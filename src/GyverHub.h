@@ -287,11 +287,6 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         return (bptr && (bptr->type == GH_BUILD_UI || bptr->type == GH_BUILD_COUNT));
     }
 
-    // получить текущее действие для ручной обработки значений
-    const GHaction& action() const {
-        return bptr->action;
-    }
-
     // подключить обработчик запроса клиента
     void onRequest(bool (*handler)(GHbuild build, GHcommand cmd)) {
         req_cb = *handler;
@@ -422,8 +417,8 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         GH_splitter(NULL);
         while ((p = GH_splitter(str)) != NULL) {
             build.type = GH_BUILD_READ;
-            build.action.name = p;
-            build.action.count = 0;
+            build.name = p;
+            build.count = 0;
             answ.key(p);
             answ += '\"';
             answ.reserve(answ.length() + 64);
@@ -529,8 +524,8 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         GH_splitter(NULL);
         while ((p = GH_splitter(str)) != NULL) {
             build.type = GH_BUILD_READ;
-            build.action.name = p;
-            build.action.count = 0;
+            build.name = p;
+            build.count = 0;
             build_cb();
             if (build.type == GH_BUILD_NONE) sendGet(p, value);
         }
@@ -1312,7 +1307,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
         if (!chunked) {
             build.type = GH_BUILD_COUNT;
-            build.action.count = 0;
+            build.count = 0;
             buf_mode = GH_COUNT;
             buf_count = 0;
             gyverhub::Json count;
@@ -1328,7 +1323,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         answ += '[';
         buf_mode = chunked ? GH_CHUNKED : GH_NORMAL;
         build.type = GH_BUILD_UI;
-        build.action.count = 0;
+        build.count = 0;
         sptr = &answ;
         tab_width = 0;
         build_cb();
