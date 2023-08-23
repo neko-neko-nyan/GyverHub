@@ -5,7 +5,7 @@
 #include "../macro.hpp"
 #include "ui/color.h"
 #include "flags.h"
-#include "ui/pos.h"
+#include "ui/point.h"
 #include "misc.h"
 #include "utils2/json.h"
 

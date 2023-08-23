@@ -10,7 +10,7 @@
 #include "utils/datatypes.h"
 #include "ui/log.h"
 #include "utils/misc.h"
-#include "ui/pos.h"
+#include "ui/point.h"
 #include "utils2/json.h"
 
 #define GH_ROW(h) h.BeginRow();
@@ -828,41 +828,41 @@ class HubBuilder {
     }
 
     // ========================= CANVAS =========================
-    bool Canvas_(FSTR name, int width = 400, int height = 300, GHcanvas* cv = nullptr, GHpos* pos = nullptr, FSTR label = nullptr) {
+    bool Canvas_(FSTR name, int width = 400, int height = 300, GHcanvas* cv = nullptr, gyverhub::Point* pos = nullptr, FSTR label = nullptr) {
         return _canvas(true, name, width, height, cv, pos, label, false);
     }
-    bool Canvas_(CSREF name, int width = 400, int height = 300, GHcanvas* cv = nullptr, GHpos* pos = nullptr, CSREF label = "") {
+    bool Canvas_(CSREF name, int width = 400, int height = 300, GHcanvas* cv = nullptr, gyverhub::Point* pos = nullptr, CSREF label = "") {
         return _canvas(false, name.c_str(), width, height, cv, pos, label.c_str(), false);
     }
 
-    bool Canvas(int width = 400, int height = 300, GHcanvas* cv = nullptr, GHpos* pos = nullptr) {
+    bool Canvas(int width = 400, int height = 300, GHcanvas* cv = nullptr, gyverhub::Point* pos = nullptr) {
         return Canvas_(0, width, height, cv, pos);
     }
-    bool Canvas(int width, int height, GHcanvas* cv, GHpos* pos, FSTR label) {
+    bool Canvas(int width, int height, GHcanvas* cv, gyverhub::Point* pos, FSTR label) {
         return Canvas_(0, width, height, cv, pos, label);
     }
-    bool Canvas(int width, int height, GHcanvas* cv, GHpos* pos, CSREF label) {
+    bool Canvas(int width, int height, GHcanvas* cv, gyverhub::Point* pos, CSREF label) {
         return Canvas_("", width, height, cv, pos, label.c_str());
     }
 
-    bool BeginCanvas_(FSTR name, int width = 400, int height = 300, GHcanvas* cv = nullptr, GHpos* pos = nullptr, FSTR label = nullptr) {
+    bool BeginCanvas_(FSTR name, int width = 400, int height = 300, GHcanvas* cv = nullptr, gyverhub::Point* pos = nullptr, FSTR label = nullptr) {
         return _canvas(true, name, width, height, cv, pos, label, true);
     }
-    bool BeginCanvas_(CSREF name, int width = 400, int height = 300, GHcanvas* cv = nullptr, GHpos* pos = nullptr, CSREF label = "") {
+    bool BeginCanvas_(CSREF name, int width = 400, int height = 300, GHcanvas* cv = nullptr, gyverhub::Point* pos = nullptr, CSREF label = "") {
         return _canvas(false, name.c_str(), width, height, cv, pos, label.c_str(), true);
     }
 
-    bool BeginCanvas(int width = 400, int height = 300, GHcanvas* cv = nullptr, GHpos* pos = nullptr) {
+    bool BeginCanvas(int width = 400, int height = 300, GHcanvas* cv = nullptr, gyverhub::Point* pos = nullptr) {
         return BeginCanvas_(0, width, height, cv, pos);
     }
-    bool BeginCanvas(int width, int height, GHcanvas* cv, GHpos* pos, FSTR label) {
+    bool BeginCanvas(int width, int height, GHcanvas* cv, gyverhub::Point* pos, FSTR label) {
         return BeginCanvas_(0, width, height, cv, pos, label);
     }
-    bool BeginCanvas(int width, int height, GHcanvas* cv, GHpos* pos, CSREF label) {
+    bool BeginCanvas(int width, int height, GHcanvas* cv, gyverhub::Point* pos, CSREF label) {
         return BeginCanvas_("", width, height, cv, pos, label.c_str());
     }
 
-    bool _canvas(bool fstr, VSPTR name, int width, int height, GHcanvas* cv, GHpos* pos, VSPTR label, bool begin) {
+    bool _canvas(bool fstr, VSPTR name, int width, int height, GHcanvas* cv, gyverhub::Point* pos, VSPTR label, bool begin) {
         if (_nameAuto(name, fstr)) name = nullptr;
         if (!_isUI() && cv) cv->extBuffer(nullptr);
 
@@ -932,42 +932,42 @@ class HubBuilder {
     }
 
     // =========================== JOY ===========================
-    bool Joystick_(FSTR name, GHpos* pos = nullptr, bool autoc = 1, bool exp = 0, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
+    bool Joystick_(FSTR name, gyverhub::Point* pos = nullptr, bool autoc = 1, bool exp = 0, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _joy(F("joy"), true, name, pos, autoc, exp, label, color);
     }
-    bool Joystick_(CSREF name, GHpos* pos = nullptr, bool autoc = 1, bool exp = 0, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
+    bool Joystick_(CSREF name, gyverhub::Point* pos = nullptr, bool autoc = 1, bool exp = 0, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _joy(F("joy"), false, name.c_str(), pos, autoc, exp, label.c_str(), color);
     }
 
-    bool Joystick(GHpos* pos = nullptr, bool autoc = 1, bool exp = 0) {
+    bool Joystick(gyverhub::Point* pos = nullptr, bool autoc = 1, bool exp = 0) {
         return Joystick_(0, pos, autoc, exp);
     }
-    bool Joystick(GHpos* pos, bool autoc, bool exp, FSTR label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
+    bool Joystick(gyverhub::Point* pos, bool autoc, bool exp, FSTR label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Joystick_(0, pos, autoc, exp, label, color);
     }
-    bool Joystick(GHpos* pos, bool autoc, bool exp, CSREF label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
+    bool Joystick(gyverhub::Point* pos, bool autoc, bool exp, CSREF label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Joystick_("", pos, autoc, exp, label.c_str(), color);
     }
 
     // =========================== DPAD ===========================
-    bool Dpad_(FSTR name, GHpos* pos = nullptr, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
+    bool Dpad_(FSTR name, gyverhub::Point* pos = nullptr, FSTR label = nullptr, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _joy(F("dpad"), true, name, pos, 0, 0, label, color);
     }
-    bool Dpad_(CSREF name, GHpos* pos = nullptr, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
+    bool Dpad_(CSREF name, gyverhub::Point* pos = nullptr, CSREF label = "", gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return _joy(F("dpad"), false, name.c_str(), pos, 0, 0, label.c_str(), color);
     }
 
-    bool Dpad(GHpos* pos = nullptr) {
+    bool Dpad(gyverhub::Point* pos = nullptr) {
         return Dpad_(0, pos);
     }
-    bool Dpad(GHpos* pos, FSTR label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
+    bool Dpad(gyverhub::Point* pos, FSTR label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Dpad_(0, pos, label, color);
     }
-    bool Dpad(GHpos* pos, CSREF label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
+    bool Dpad(gyverhub::Point* pos, CSREF label, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
         return Dpad_("", pos, label.c_str(), color);
     }
 
-    bool _joy(FSTR tag, bool fstr, VSPTR name, GHpos* pos, bool autoc, bool exp, VSPTR label, gyverhub::Color color) {
+    bool _joy(FSTR tag, bool fstr, VSPTR name, gyverhub::Point* pos, bool autoc, bool exp, VSPTR label, gyverhub::Color color) {
         if (_nameAuto(name, fstr)) name = nullptr;
         if (_isUI()) {
             _begin(tag);
@@ -986,7 +986,7 @@ class HubBuilder {
             _end();
         } else if (bptr->type == GH_BUILD_ACTION) {
             bool act = bptr->parse(name, pos, GH_POS, fstr);
-            if (act && pos) {
+            if (act && pos != nullptr) {
                 pos->x -= 255;
                 pos->y -= 255;
             }

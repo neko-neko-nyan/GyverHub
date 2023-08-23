@@ -52,9 +52,7 @@ void GHbuild::parse(void *var, GHdata_t dtype) {
             break;
         case GH_POS: {
             uint32_t xy = atol(str);
-            ((GHpos*)var)->_changed = true;
-            ((GHpos*)var)->x = xy >> 16;
-            ((GHpos*)var)->y = xy & 0xffff;
+            *(gyverhub::Point*)var = gyverhub::Point(xy >> 16, xy & 0xffff, true);
         } break;
 
         case GH_NULL:
