@@ -1,4 +1,5 @@
 #include "point.h"
+#include <cmath>
 
 
 int16_t gyverhub::Point::pointsDistance(int16_t x0, int16_t y0, int16_t x1, int16_t y1) {

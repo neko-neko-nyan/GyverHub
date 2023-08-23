@@ -1,14 +1,10 @@
 #pragma once
+#include "macro.hpp"
+#include "utils2/json.h"
 
 // HTML Canvas API
 // https://www.w3schools.com/tags/ref_canvas.asp
 // https://processing.org/reference/
-
-#include <Arduino.h>
-
-#include "macro.hpp"
-#include "utils/misc.h"
-#include "utils2/json.h"
 
 enum GHmode_t {
     CV_BUTT,

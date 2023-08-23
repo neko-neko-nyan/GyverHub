@@ -1,17 +1,12 @@
 #pragma once
 #include "config.hpp"
-#include "macro.hpp"
+#include <Arduino.h>
+#include "utils/stats.h"
+
 
 #ifdef GH_NO_STREAM
-class HubStream {
-   public:
-};
+class HubStream {};
 #else
-
-#include <Arduino.h>
-#include <Stream.h>
-
-#include "utils/stats.h"
 
 class HubStream {
    public:

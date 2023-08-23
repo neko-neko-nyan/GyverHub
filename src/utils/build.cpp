@@ -1,4 +1,7 @@
 #include "build.h"
+#include "utils/flags.h"
+#include "ui/color.h"
+#include "ui/point.h"
 
 void GHbuild::parse(void *var, GHdata_t dtype) {
     const char *str = this->value;

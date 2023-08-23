@@ -1,8 +1,6 @@
 #pragma once
 #include <Print.h>
 
-#include "utils/misc.h"
-
 class GHlog : public Print {
    public:
     // начать и указать размер буфера

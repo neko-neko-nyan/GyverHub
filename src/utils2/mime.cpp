@@ -1,4 +1,5 @@
 #include "mime.h"
+#include "macro.hpp"
 
 #define PGMSTR_T const char*
 

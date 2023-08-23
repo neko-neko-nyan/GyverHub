@@ -1,6 +1,6 @@
 #pragma once
-
 #include <Arduino.h>
+#include "macro.hpp"
 
 namespace gyverhub {
     class Json : public String {

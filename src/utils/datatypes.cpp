@@ -1,4 +1,6 @@
 #include "datatypes.h"
+#include "utils/flags.h"
+#include "ui/color.h"
 
 void GHtypeToStr(gyverhub::Json* s, void* var, GHdata_t type) {
     if (!var) {

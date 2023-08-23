@@ -1,17 +1,14 @@
 #pragma once
 #include <Arduino.h>
-
-#include "canvas.h"
-#include "config.hpp"
 #include "macro.hpp"
-#include "utils/build.h"
+#include "canvas.h"
 #include "ui/button.h"
 #include "ui/color.h"
-#include "utils/datatypes.h"
 #include "ui/log.h"
-#include "utils/misc.h"
 #include "ui/point.h"
 #include "utils2/json.h"
+#include "utils/build.h"
+#include "utils/flags.h"
 
 #define GH_ROW(h) h.BeginRow();
 #define GH_ROW_END(h) h.EndRow();

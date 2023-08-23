@@ -1,12 +1,4 @@
 #pragma once
-#include <Arduino.h>
-
-#include "../config.hpp"
-#include "../macro.hpp"
-#include "ui/color.h"
-#include "flags.h"
-#include "ui/point.h"
-#include "misc.h"
 #include "utils2/json.h"
 
 enum GHdata_t {

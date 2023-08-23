@@ -1,28 +1,6 @@
 #pragma once
 #include <Arduino.h>
-
-#include "../config.hpp"
-#include "../macro.hpp"
-
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_FS
-#include <FS.h>
-#if (GH_FS == LittleFS)
-#include <LittleFS.h>
-#elif (GH_FS == SPIFFS)
-#include <SPIFFS.h>
-#endif
-#endif
-
-#ifdef ESP8266
-#else
-#ifndef GH_NO_OTA
-#include <Update.h>
-#endif
-#endif
-#endif
-
-extern String _GH_empty_str;
+#include "macro.hpp"
 
 template <uint8_t SIZE>
 struct GHparser {

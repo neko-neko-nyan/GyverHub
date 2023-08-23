@@ -1,5 +1,6 @@
 #include "stats.h"
 #include <Arduino.h>
+#include "macro.hpp"
 
 GH_PGM(_GH_CMD0, "focus");
 GH_PGM(_GH_CMD1, "ping");
