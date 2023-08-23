@@ -18,7 +18,7 @@
 #include "utils/modules.h"
 #include "utils/stats.h"
 #include "utils2/base64.h"
-#include "utils/timer.h"
+#include "utils2/timer.h"
 #include "utils2/json.h"
 #include "utils2/files.h"
 
@@ -800,7 +800,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
                 GH_DEBUG_LOG("Event: GH_FETCH from %d", from);
                 fs_client = client;
-                fs_tmr = millis();
+                fs_tmr.reset();
                 uint32_t size = file_b ? file_b_size : file_d.size();
                 file_b_idx = 0;
                 dwn_chunk_count = 0;
@@ -823,7 +823,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 }
 
                 GH_DEBUG_LOG("Event: GH_FETCH_CHUNK from %d", from);
-                fs_tmr = millis();
+                fs_tmr.reset();
                 answerChunk();
                 dwn_chunk_count++;
                 if (dwn_chunk_count < dwn_chunk_amount)
@@ -885,7 +885,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
                 GH_DEBUG_LOG("Event: GH_UPLOAD from %d", from);
                 fs_upload_client = client;
-                fs_upload_tmr = millis();
+                fs_upload_tmr.reset();
 
                 answerType(F("upload_start"));
                 return;
@@ -926,7 +926,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                     fs_upload_file.close();
                     answerType(F("upload_end"));
                 } else {
-                    fs_upload_tmr = millis();
+                    fs_upload_tmr.reset();
                     answerType(F("upload_next_chunk"));
                 }
                 return;
@@ -987,7 +987,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
                 ota_client = client;
                 ota_f = true;
-                ota_tmr = millis();
+                ota_tmr.reset();
                 answerType(F("ota_start"));
                 return;
 #endif
@@ -1034,7 +1034,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                     }
                 } else {
                     answerType(F("ota_next_chunk"));
-                    ota_tmr = millis();
+                    ota_tmr.reset();
                 }
                 return;
 #endif
@@ -1123,19 +1123,19 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
 #ifdef GH_ESP_BUILD
 #ifndef GH_NO_OTA
-        if (ota_f && (uint16_t)millis() - ota_tmr >= (GH_CONN_TOUT * 1000)) {
+        if (ota_f && ota_tmr.isTimedOut(GH_CONN_TOUT * 1000ul)) {
             GH_DEBUG_LOG("Event: GH_OTA_ABORTED from %d", ota_client.from);
             Update.abort();
             ota_f = false;
         }
 #endif
 #ifndef GH_NO_FS
-        if (fs_upload_file && (uint16_t)millis() - fs_upload_tmr >= (GH_CONN_TOUT * 1000)) {
+        if (fs_upload_file && fs_upload_tmr.isTimedOut(GH_CONN_TOUT * 1000ul)) {
             GH_DEBUG_LOG("Event: GH_UPLOAD_ABORTED from %d", fs_upload_client.from);
             fs_upload_file.close();
         }
 
-        if ((file_d || file_b) && (uint16_t)millis() - fs_tmr >= (GH_CONN_TOUT * 1000)) {
+        if ((file_d || file_b) && fs_tmr.isTimedOut(GH_CONN_TOUT * 1000ul)) {
             GH_DEBUG_LOG("Event: GH_FETCH_ABORTED from %d", fs_client.from);
             if (fetch_cb) fetch_cb(fetch_path, false);
             if (file_d) file_d.close();
@@ -1596,18 +1596,18 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 #endif
 #ifndef GH_NO_OTA
     bool ota_f = false;
-    uint16_t ota_tmr = 0;
+    gyverhub::Timer ota_tmr {};
     GHclient ota_client;
 #endif
 #ifndef GH_NO_FS
     bool fs_mounted = 0;
     // upload
     GHclient fs_upload_client;
-    uint16_t fs_upload_tmr = 0;
+    gyverhub::Timer fs_upload_tmr {};
     File fs_upload_file;
     // fetch
     GHclient fs_client;
-    uint16_t fs_tmr = 0;
+    gyverhub::Timer fs_tmr {};
     String fetch_path;
     const uint8_t* file_b = nullptr;
     uint32_t file_b_size, file_b_idx;
