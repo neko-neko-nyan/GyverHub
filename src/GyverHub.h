@@ -196,7 +196,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
     }
 
     // подключить функцию-обработчик запроса при ручном соединении
-    void onManual(void (*handler)(String& s, bool broadcast)) {
+    void onManual(void (*handler)(const String& s, bool broadcast)) {
         manual_cb = *handler;
     }
 
@@ -1228,6 +1228,16 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 
     // ======================= UI ========================
     void answerUI() {
+        // TODO переделать
+        // Хак для локальной функции
+        static GyverHub *self;
+        self = this;
+        struct L {
+            static void _send1(const String &answ1) {
+                self->_answer(answ1, false);
+            };
+        };
+
         if (!build_cb) return answerType();
         bool chunked = buf_size;
 
@@ -1240,7 +1250,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         answ.begin();
         answ.key(F("controls"));
         answ += '[';
-        gyverhub::Builder::buildUi(build_cb, &answ, *client_ptr, chunked ? buf_size : 0);
+        gyverhub::Builder::buildUi(build_cb, &answ, *client_ptr, chunked ? buf_size : 0, L::_send1);
         if (answ[answ.length() - 1] == ',') answ[answ.length() - 1] = ']';  // ',' = ']'
         else answ += ']';
         answ += ',';
@@ -1388,7 +1398,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
     }
 
     // ======================= ANSWER ========================
-    void _answer(String& answ, bool close = true) {
+    void _answer(const String& answ, bool close = true) {
         if (!client_ptr) return;
 #ifdef GH_ESP_BUILD
         switch (client_ptr->from) {
@@ -1424,7 +1434,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
     }
 
     // ======================= SEND ========================
-    void _send(String& answ, bool broadcast = false) {
+    void _send(const String& answ, bool broadcast = false) {
         if (manual_cb) manual_cb(answ, broadcast);
 
 #ifndef GH_NO_STREAM
@@ -1470,7 +1480,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
     bool (*req_cb)(const char* name, const char* value, GHclient nclient, GHcommand cmd) = nullptr;
     void (*info_cb)(GHinfo_t info) = nullptr;
     void (*cli_cb)(String& str) = nullptr;
-    void (*manual_cb)(String& s, bool broadcast) = nullptr;
+    void (*manual_cb)(const String& s, bool broadcast) = nullptr;
     GHclient* client_ptr = nullptr;
     gyverhub::Json *sptr = nullptr;
 
