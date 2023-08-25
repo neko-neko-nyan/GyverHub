@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 #include "builder.h"
-#include "canvas.h"
+#include "ui/canvas.h"
 #include "config.hpp"
 #include "macro.hpp"
 #include "stream.h"
@@ -457,7 +457,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
     // ======================= SEND CANVAS ========================
     // отправить холст
-    void sendCanvas(const String& name, GHcanvas& cv) {
+    void sendCanvas(const String& name, gyverhub::Canvas& cv) {
         if (!running_f) return;
         gyverhub::Json answ;
         _updateBegin(answ);
@@ -471,7 +471,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     }
 
     // начать отправку холста
-    void sendCanvasBegin(const String& name, GHcanvas& cv) {
+    void sendCanvasBegin(const String& name, gyverhub::Canvas& cv) {
         if (!running_f) return;
         cv.buf.clear();
         _updateBegin(cv.buf);
@@ -480,7 +480,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     }
 
     // закончить отправку холста
-    void sendCanvasEnd(GHcanvas& cv) {
+    void sendCanvasEnd(gyverhub::Canvas& cv) {
         cv.buf += F("]}");
         cv.buf.end();
         _send(cv.buf);

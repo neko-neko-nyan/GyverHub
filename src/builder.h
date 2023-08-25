@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include "macro.hpp"
-#include "canvas.h"
+#include "ui/canvas.h"
 #include "ui/button.h"
 #include "ui/color.h"
 #include "ui/log.h"
@@ -825,41 +825,41 @@ class HubBuilder {
     }
 
     // ========================= CANVAS =========================
-    bool Canvas_(FSTR name, int width = 400, int height = 300, GHcanvas* cv = nullptr, gyverhub::Point* pos = nullptr, FSTR label = nullptr) {
+    bool Canvas_(FSTR name, int width = 400, int height = 300, gyverhub::Canvas* cv = nullptr, gyverhub::Point* pos = nullptr, FSTR label = nullptr) {
         return _canvas(true, name, width, height, cv, pos, label, false);
     }
-    bool Canvas_(CSREF name, int width = 400, int height = 300, GHcanvas* cv = nullptr, gyverhub::Point* pos = nullptr, CSREF label = "") {
+    bool Canvas_(CSREF name, int width = 400, int height = 300, gyverhub::Canvas* cv = nullptr, gyverhub::Point* pos = nullptr, CSREF label = "") {
         return _canvas(false, name.c_str(), width, height, cv, pos, label.c_str(), false);
     }
 
-    bool Canvas(int width = 400, int height = 300, GHcanvas* cv = nullptr, gyverhub::Point* pos = nullptr) {
+    bool Canvas(int width = 400, int height = 300, gyverhub::Canvas* cv = nullptr, gyverhub::Point* pos = nullptr) {
         return Canvas_(0, width, height, cv, pos);
     }
-    bool Canvas(int width, int height, GHcanvas* cv, gyverhub::Point* pos, FSTR label) {
+    bool Canvas(int width, int height, gyverhub::Canvas* cv, gyverhub::Point* pos, FSTR label) {
         return Canvas_(0, width, height, cv, pos, label);
     }
-    bool Canvas(int width, int height, GHcanvas* cv, gyverhub::Point* pos, CSREF label) {
+    bool Canvas(int width, int height, gyverhub::Canvas* cv, gyverhub::Point* pos, CSREF label) {
         return Canvas_("", width, height, cv, pos, label.c_str());
     }
 
-    bool BeginCanvas_(FSTR name, int width = 400, int height = 300, GHcanvas* cv = nullptr, gyverhub::Point* pos = nullptr, FSTR label = nullptr) {
+    bool BeginCanvas_(FSTR name, int width = 400, int height = 300, gyverhub::Canvas* cv = nullptr, gyverhub::Point* pos = nullptr, FSTR label = nullptr) {
         return _canvas(true, name, width, height, cv, pos, label, true);
     }
-    bool BeginCanvas_(CSREF name, int width = 400, int height = 300, GHcanvas* cv = nullptr, gyverhub::Point* pos = nullptr, CSREF label = "") {
+    bool BeginCanvas_(CSREF name, int width = 400, int height = 300, gyverhub::Canvas* cv = nullptr, gyverhub::Point* pos = nullptr, CSREF label = "") {
         return _canvas(false, name.c_str(), width, height, cv, pos, label.c_str(), true);
     }
 
-    bool BeginCanvas(int width = 400, int height = 300, GHcanvas* cv = nullptr, gyverhub::Point* pos = nullptr) {
+    bool BeginCanvas(int width = 400, int height = 300, gyverhub::Canvas* cv = nullptr, gyverhub::Point* pos = nullptr) {
         return BeginCanvas_(0, width, height, cv, pos);
     }
-    bool BeginCanvas(int width, int height, GHcanvas* cv, gyverhub::Point* pos, FSTR label) {
+    bool BeginCanvas(int width, int height, gyverhub::Canvas* cv, gyverhub::Point* pos, FSTR label) {
         return BeginCanvas_(0, width, height, cv, pos, label);
     }
-    bool BeginCanvas(int width, int height, GHcanvas* cv, gyverhub::Point* pos, CSREF label) {
+    bool BeginCanvas(int width, int height, gyverhub::Canvas* cv, gyverhub::Point* pos, CSREF label) {
         return BeginCanvas_("", width, height, cv, pos, label.c_str());
     }
 
-    bool _canvas(bool fstr, VSPTR name, int width, int height, GHcanvas* cv, gyverhub::Point* pos, VSPTR label, bool begin) {
+    bool _canvas(bool fstr, VSPTR name, int width, int height, gyverhub::Canvas* cv, gyverhub::Point* pos, VSPTR label, bool begin) {
         if (_nameAuto(name, fstr)) name = nullptr;
         if (!_isUI() && cv) cv->extBuffer(nullptr);
 
