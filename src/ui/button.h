@@ -1,23 +1,24 @@
 #pragma once
 
-class HubBuilder;
 
 namespace gyverhub {
+    class Builder;
+
     class Button {
-        char value = '0';
+        uint8_t value = 0;
 
     public:
         constexpr Button() {}
         constexpr Button(const Button &) = default;
 
         operator bool() {
-            return this->value == '1';
+            return this->value == 1;
         }
 
         bool clicked() {
-            return this->value == '2';
+            return this->value == 2;
         }
 
-        friend class ::HubBuilder;
+        friend class Builder;
     };
 }

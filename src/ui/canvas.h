@@ -8,15 +8,15 @@
 
 namespace gyverhub {
     enum class EllipseMode {
-        CV_CENTER,
-        CV_CORNER
+        CENTER,
+        CORNER
     };
 
     enum class RectMode {
-        CV_CORNER,
-        CV_CORNERS,
-        CV_CENTER,
-        CV_RADIUS
+        CORNER,
+        CORNERS,
+        CENTER,
+        RADIUS
     };
 
     enum class LineCap {
@@ -66,10 +66,10 @@ namespace gyverhub {
     private:
         Json* ps = nullptr;
         bool first = true;
-        char* fontName = "Arial";
+        char* fontName;
         int fontSize = 20;
-        EllipseMode ellipseMode = EllipseMode::CV_CENTER;
-        RectMode rectMode = RectMode::CV_CORNER;
+        EllipseMode _ellipseMode = EllipseMode::CENTER;
+        RectMode _rectMode = RectMode::CORNER;
         bool enableStroke = true;
         bool enableFill = true;
 
@@ -111,6 +111,7 @@ namespace gyverhub {
     public:
         Canvas() {
             ps = &buf;
+            fontName = strdup("Arial");
         }
 
         ~Canvas() {
@@ -214,11 +215,11 @@ namespace gyverhub {
         // окружность (x, y, радиус), px
         void circle(int x, int y, int r) {
             beginPath();
-            switch (ellipseMode) {
-                case EllipseMode::CV_CORNER:
+            switch (_ellipseMode) {
+                case EllipseMode::CORNER:
                     arc(x + r, y + r, r);
                     break;
-                case EllipseMode::CV_CENTER:
+                case EllipseMode::CENTER:
                     arc(x, y, r);
                     break;
             }
@@ -267,18 +268,18 @@ namespace gyverhub {
         void rect(int x, int y, int w, int h, int tl = -1, int tr = -1, int br = 0, int bl = 0) {
             beginPath();
             int X = x, Y = y, W = w, H = h;
-            switch (rectMode) {
-                case RectMode::CV_CORNER:
+            switch (_rectMode) {
+                case RectMode::CORNER:
                     break;
-                case RectMode::CV_CORNERS:
+                case RectMode::CORNERS:
                     W = w - x;
                     H = h - y;
                     break;
-                case RectMode::CV_CENTER:
+                case RectMode::CENTER:
                     X = x - w / 2;
                     Y = y - h / 2;
                     break;
-                case RectMode::CV_RADIUS:
+                case RectMode::RADIUS:
                     X = x - w;
                     Y = y - h;
                     W = w * 2;
@@ -301,12 +302,12 @@ namespace gyverhub {
 
         // режим окружности: CV_CENTER (умолч), CV_CORNER
         void ellipseMode(EllipseMode mode) {
-            ellipseMode = mode;
+            _ellipseMode = mode;
         }
 
         // режим прямоугольника: CV_CORNER (умолч), CV_CORNERS, CV_CENTER, CV_RADIUS
         void rectMode(RectMode mode) {
-            rectMode = mode;
+            _rectMode = mode;
         }
 
         // ======================= TEXT ========================

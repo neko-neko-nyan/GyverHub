@@ -3,12 +3,11 @@
 
 #include <Arduino.h>
 
-#include "builder.h"
+#include "ui/builder.h"
 #include "ui/canvas.h"
 #include "config.hpp"
 #include "macro.hpp"
 #include "stream.h"
-#include "utils/build.h"
 #include "ui/color.h"
 #include "utils/datatypes.h"
 #include "utils/flags.h"
@@ -85,7 +84,7 @@ class HubWS {};
 #endif
 
 // ========================== CLASS ==========================
-class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public HubMQTT, public HubWS {
+class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS {
    public:
     // ========================== CONSTRUCT ==========================
 
@@ -192,7 +191,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     // ========================= ATTACH =========================
 
     // подключить функцию-сборщик интерфейса
-    void onBuild(void (*handler)()) {
+    void onBuild(gyverhub::BuildCallback handler) {
         build_cb = *handler;
     }
 
@@ -253,11 +252,6 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 #endif
     }
 
-    // получить свойства текущего билда. Вызывать внутри обработчика
-    GHbuild getBuild() {
-        return bptr ? *bptr : GHbuild();
-    }
-
     // true - интерфейс устройства сейчас открыт на сайте или в приложении
     bool focused() {
         if (!running_f) return 0;
@@ -272,23 +266,8 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
         return focus_arr[from];
     }
 
-    // обновить веб-интерфейс. Вызывать внутри обработчика build
-    void refresh() {
-        refresh_f = true;
-    }
-
-    // true - если билдер вызван для set или read операций
-    bool buildRead() {
-        return (bptr && (bptr->type == GH_BUILD_ACTION || bptr->type == GH_BUILD_READ));
-    }
-
-    // true - если билдер вызван для запроса компонентов (при загрузке панели управления)
-    bool buildUI() {
-        return (bptr && (bptr->type == GH_BUILD_UI || bptr->type == GH_BUILD_COUNT));
-    }
-
     // подключить обработчик запроса клиента
-    void onRequest(bool (*handler)(GHbuild build, GHcommand cmd)) {
+    void onRequest(bool (*handler)(const char* name, const char* value, GHclient nclient, GHcommand cmd)) {
         req_cb = *handler;
     }
 
@@ -358,7 +337,6 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     // отправить пуш уведомление
     void sendPush(const String& text) {
         if (!running_f) return;
-        upd_f = 1;
         gyverhub::Json answ;
         answ.begin();
         answ.appendId(id);
@@ -371,7 +349,6 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     // отправить всплывающее уведомление
     void sendNotice(const String& text, gyverhub::Color color = gyverhub::Colors::GH_GREEN) {
         if (!running_f || !focused()) return;
-        upd_f = 1;
         gyverhub::Json answ;
         answ.begin();
         answ.appendId(id);
@@ -385,7 +362,6 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     // показать окно с ошибкой
     void sendAlert(const String& text) {
         if (!running_f || !focused()) return;
-        upd_f = 1;
         gyverhub::Json answ;
         answ.begin();
         answ.appendId(id);
@@ -404,29 +380,21 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
     // отправить update по имени компонента (значение будет прочитано в build). Нельзя вызывать из build. Имена можно передать списком через запятую
     void sendUpdate(const String& name) {
-        if (!running_f || !build_cb || bptr || !focused()) return;
-        GHbuild build(GH_BUILD_READ);
-        bptr = &build;
+        if (!running_f || !build_cb || !focused()) return;
 
         gyverhub::Json answ;
-        sptr = &answ;
         _updateBegin(answ);
 
         char* str = (char*)name.c_str();
         char* p = str;
         GH_splitter(NULL);
         while ((p = GH_splitter(str)) != NULL) {
-            build.type = GH_BUILD_READ;
-            build.name = p;
-            build.count = 0;
             answ.key(p);
             answ += '\"';
             answ.reserve(answ.length() + 64);
-            build_cb();
+            gyverhub::Builder::buildRead(build_cb, &answ, p);
             answ += F("\",");
         }
-        bptr = nullptr;
-        sptr = nullptr;
         answ[answ.length() - 1] = '}';
         answ.end();
         _send(answ);
@@ -438,7 +406,6 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     }
 
     void _updateBegin(gyverhub::Json& answ) {
-        upd_f = 1;
         answ.begin();
         answ.appendId(id);
         answ.itemString(F("type"), F("update"));
@@ -512,25 +479,15 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     // отправить значение по имени компонента на get-топик (MQTT) (значение будет прочитано в build). Имена можно передать списком через запятую
     void sendGet(GH_UNUSED const String& name) {
 #if GH_MQTT_IMPL != GH_IMPL_NONE
-        if (!running_f || !build_cb || bptr) return;
-        GHbuild build(GH_BUILD_READ);
-        bptr = &build;
-
-        gyverhub::Json value;
-        sptr = &value;
+        if (!running_f || !build_cb) return;
 
         char* str = (char*)name.c_str();
         char* p = str;
         GH_splitter(NULL);
         while ((p = GH_splitter(str)) != NULL) {
-            build.type = GH_BUILD_READ;
-            build.name = p;
-            build.count = 0;
-            build_cb();
-            if (build.type == GH_BUILD_NONE) sendGet(p, value);
+            gyverhub::Json value;
+            if (gyverhub::Builder::buildRead(build_cb, &value, p)) sendGet(p, value);
         }
-        bptr = nullptr;
-        sptr = nullptr;
 #endif
     }
 
@@ -627,10 +584,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
             if (cmdn == GHcommand::SET) {
                 GH_DEBUG_LOG("Event: GH_SET_HOOK from %d", from);
                 if (modules.read(GH_MOD_SET)) {
-                    GHbuild build(GH_BUILD_ACTION, name, value, client);
-                    bptr = &build;
-                    build_cb();
-                    bptr = nullptr;
+                    gyverhub::Builder::buildSet(build_cb, name, value, client);
                     if (autoGet_f) sendGet(name, value);
                     if (autoUpd_f) _sendUpdate(name, value);
                 }
@@ -717,17 +671,13 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
                 if (!build_cb || !modules.read(GH_MOD_SET)) {
                     answerType();
                 } else {
-                    GHbuild build(GH_BUILD_ACTION, name, value, client);
-                    bptr = &build;
-                    upd_f = refresh_f = 0;
-                    build_cb();
-                    bptr = nullptr;
+                    bool mustRefresh = gyverhub::Builder::buildSet(build_cb, name, value, client);
 #ifdef GH_ESP_BUILD
                     if (autoGet_f) sendGet(name, value);
 #endif
                     if (autoUpd_f) _sendUpdate(name, value);
-                    if (refresh_f) answerUI();
-                    else if (!upd_f) answerType();
+                    if (mustRefresh) answerUI();
+                    else if (!autoUpd_f) answerType();
                 }
                 return;
 
@@ -1161,24 +1111,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     const char* getID() {
         return id;
     }
-    void _afterComponent() {
-        switch (buf_mode) {
-            case GH_NORMAL:
-                break;
 
-            case GH_COUNT:
-                buf_count += sptr->length();
-                sptr->clear();
-                break;
-
-            case GH_CHUNKED:
-                if (sptr->length() >= buf_size) {
-                    _answer(*sptr, false);
-                    sptr->clear();
-                }
-                break;
-        }
-    }
     void _power(FSTR mode) {
         if (!running_f) return;
 
@@ -1192,7 +1125,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     }
 
     bool _reqHook(const char* name, const char* value, GHclient client, GHcommand event) {
-        if (req_cb && !req_cb(GHbuild(GH_BUILD_NONE, name, value, client), event)) return 0;  // forbidden
+        if (req_cb && !req_cb(name, value, client, event)) return 0;  // forbidden
         return 1;
     }
     bool _checkModule(GHmodule_t mod) {
@@ -1296,40 +1229,18 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
     // ======================= UI ========================
     void answerUI() {
         if (!build_cb) return answerType();
-        GHbuild build;
-        build.client = *client_ptr;
-        bptr = &build;
         bool chunked = buf_size;
 
 #ifdef GH_ESP_BUILD
-        if (build.client.from == GH_WS || build.client.from == GH_MQTT) chunked = false;
+        if (client_ptr->from == GH_WS || client_ptr->from == GH_MQTT) chunked = false;
 #endif
 
-        if (!chunked) {
-            build.type = GH_BUILD_COUNT;
-            build.count = 0;
-            buf_mode = GH_COUNT;
-            buf_count = 0;
-            gyverhub::Json count;
-            sptr = &count;
-            tab_width = 0;
-            build_cb();
-        }
-
         gyverhub::Json answ;
-        answ.reserve((chunked ? buf_size : buf_count) + 100);
+        answ.reserve((chunked ? buf_size : gyverhub::Builder::buildCount(build_cb, *client_ptr)) + 100);
         answ.begin();
         answ.key(F("controls"));
         answ += '[';
-        buf_mode = chunked ? GH_CHUNKED : GH_NORMAL;
-        build.type = GH_BUILD_UI;
-        build.count = 0;
-        sptr = &answ;
-        tab_width = 0;
-        build_cb();
-        sptr = nullptr;
-        bptr = nullptr;
-
+        gyverhub::Builder::buildUi(build_cb, &answ, *client_ptr, chunked ? buf_size : 0);
         if (answ[answ.length() - 1] == ',') answ[answ.length() - 1] = ']';  // ',' = ']'
         else answ += ']';
         answ += ',';
@@ -1433,7 +1344,7 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 #endif
         answ.itemInteger(F("modules"), modules.mods);
         answ.end();
-        _answer(answ, true);
+        _answer(answ);
     }
 
     // ======================= CHUNK ========================
@@ -1555,26 +1466,18 @@ class GyverHub : public HubBuilder, public HubStream, public HubHTTP, public Hub
 
     void (*fetch_cb)(String& path, bool start) = nullptr;
     void (*data_cb)(const char* name, const char* value) = nullptr;
-    void (*build_cb)() = nullptr;
-    bool (*req_cb)(GHbuild build, GHcommand cmd) = nullptr;
+    gyverhub::BuildCallback build_cb = nullptr;
+    bool (*req_cb)(const char* name, const char* value, GHclient nclient, GHcommand cmd) = nullptr;
     void (*info_cb)(GHinfo_t info) = nullptr;
     void (*cli_cb)(String& str) = nullptr;
     void (*manual_cb)(String& s, bool broadcast) = nullptr;
     GHclient* client_ptr = nullptr;
+    gyverhub::Json *sptr = nullptr;
 
     bool running_f = 0;
-    bool refresh_f = 0;
-    bool upd_f = 0;
     bool answ_f = 0;
 
-    enum GHbuildmode_t {
-        GH_NORMAL,
-        GH_COUNT,
-        GH_CHUNKED,
-    };
-    GHbuildmode_t buf_mode = GH_NORMAL;
     uint16_t buf_size = 0;
-    uint16_t buf_count = 0;
 
     uint16_t focus_tmr = 0;
     int8_t focus_arr[GH_CONN_AMOUNT] = {};
