@@ -1,6 +1,22 @@
 #pragma once
 #include <Arduino.h>
+#include "macro.hpp"
+
+#if GHI_ESP_BUILD
 #include <bitset>
+#else
+namespace std {
+    template<size_t N>
+    class bitset {
+    public:
+        bitset(unsigned long value) {}
+
+        unsigned long long to_ullong() const noexcept {
+            return 0;
+        }
+    };
+}
+#endif
 
 template<size_t N>
 class GHflags : public std::bitset<N> {
