@@ -72,9 +72,19 @@ namespace gyverhub {
 
         void itemInteger(FSTR key, uint64_t value) {
             this->key(key);
+#if GHI_ESP_BUILD
             this->concat(value);
+#else
+            this->concat((unsigned long) value);
+#endif
             this->concat(",", 1);
         }
+
+#if !GHI_ESP_BUILD
+        void clear() {
+            len = 0;
+        }
+#endif
     };
 }
 

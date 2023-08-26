@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdint>
-#include <cstddef>
+#include <stdint.h>
+#include <stddef.h>
 
 namespace gyverhub {
     char toBase64(uint8_t n);

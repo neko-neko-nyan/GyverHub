@@ -3,6 +3,9 @@
 #if defined(ESP32) && !defined(strchr_P)
 #define strchr_P(a, b) strchr((a),(b))
 #endif
+#if defined(ESP8266) && !defined(strchr_P)
+#define strchr_P(a, b) memchr_P((a),(b), strlen_P((a)))
+#endif
 
 void gyverhub::Json::appendEscaped(const void *str, bool fstr, char sym) {
     if (fstr) appendEscaped((FSTR) str, sym);
@@ -28,7 +31,7 @@ void gyverhub::Json::appendEscaped(const char *str, char sym) {
 void gyverhub::Json::appendEscaped(FSTR fstr, char sym) {
     const char *str = (const char *)fstr;
     if (!str) return;
-    
+
     if (strchr_P(str, sym) == 0) {
         concat(fstr);
         return;

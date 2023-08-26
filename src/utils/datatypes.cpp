@@ -56,7 +56,11 @@ void GHtypeToStr(gyverhub::Json* s, void* var, GHdata_t type) {
             *s += ((gyverhub::Color*)var)->toHex();
             break;
         case GH_FLAGS:
+#if GH_ESP_BUILD
             *s += ((GHflags<64>*)var)->to_ullong();
+#else
+            *s += (unsigned long)((GHflags<64>*)var)->to_ullong();
+#endif
             break;
         case GH_POS:
             break;

@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include <stdint.h>
 
 namespace gyverhub {
     enum class Colors : uint32_t {
