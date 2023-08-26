@@ -10,25 +10,25 @@
 class HubWS {
     // ============ PROTECTED =============
    protected:
-    HubWS() : server(GH_WS_PORT), ws("/") {
+    HubWS() : server(GHC_WS_PORT), ws("/") {
         server.addHandler(&ws);
     }
 
     virtual void parse(char* url, GHconn_t from) = 0;
 
     void beginWS() {
-        ws.onEvent([this](GH_UNUSED AsyncWebSocket* server, GH_UNUSED AsyncWebSocketClient* client, AwsEventType etype, void* arg, uint8_t* data, size_t len) {
+        ws.onEvent([this](GHI_UNUSED AsyncWebSocket* server, GHI_UNUSED AsyncWebSocketClient* client, AwsEventType etype, void* arg, uint8_t* data, size_t len) {
             switch (etype) {
                 case WS_EVT_CONNECT:
-                    GH_DEBUG_LOG("WS connected");
+                    GHI_DEBUG_LOG("WS connected");
                     break;
 
                 case WS_EVT_DISCONNECT:
-                    GH_DEBUG_LOG("WS disconnected");
+                    GHI_DEBUG_LOG("WS disconnected");
                     break;
 
                 case WS_EVT_ERROR:
-                    GH_DEBUG_LOG("WS error");
+                    GHI_DEBUG_LOG("WS error");
                     break;
 
                 case WS_EVT_DATA: {
@@ -59,7 +59,7 @@ class HubWS {
         ws.textAll(answ.c_str());
     }
 
-    void answerWS(String& answ) {
+    void answerWS(const String& answ) {
         ws.text(clientID, answ.c_str());
     }
 

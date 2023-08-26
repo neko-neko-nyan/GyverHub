@@ -1,22 +1,101 @@
+/**
+ * macro.h - макросы GyverHub
+ * 
+ * GHC_* - Макросы конфигурации библиотеки, указываются в config.h
+ * GHI_* - Внутренние макросы (конфигурация и утилиты), указываются здесь.
+ * GH_* - Макросы конфигурации, указываемые пользователем перед include <GyverHub.h>
+ * GH_* - Утилиты для пользователей библиотеки
+ */
 #pragma once
 #include "config.hpp"
 
-#define GH_UNUSED __attribute__((unused))
-#define VSPTR const void*
-#define CSREF const String&
-#define GH_PGM(name, str) static const char name[] PROGMEM = str
-#define GH_PGM_LIST(name, ...) const char* const name[] PROGMEM = {__VA_ARGS__}
-#define FSTR const __FlashStringHelper*
+
+// ============================================================================
+// Утилиты для пользователей библиотеки
+// ============================================================================
+
 #define GH_NO_LABEL F("_no")
 #define GH_NUMBERS F("^\\d+$")
 #define GH_LETTERS F("^[a-zA-Z]+$")
 #define GH_LETTERS_S F("^[a-z]+$")
 #define GH_LETTERS_C F("^[A-Z]+$")
 
-#if (defined(ESP8266) || defined(ESP32))
-#define GH_ESP_BUILD
+#define VSPTR const void*
+#define CSREF const String&
+#define FSTR const __FlashStringHelper*
+
+
+// ============================================================================
+// Внутренние утилиты
+// ============================================================================
+
+#define GHI_UNUSED __attribute__((unused))
+#define GHI_PGM(name, str) static const char name[] PROGMEM = str
+#define GHI_PGM_LIST(name, ...) static const char* const name[] PROGMEM = {__VA_ARGS__}
+#define GHI_MOD_ENABLED(MODULE) ((GHC_MODS_ENABLED & (MODULE)) != 0)
+
+
+// ============================================================================
+// Конфигурация
+// ============================================================================
+
+#if defined(ESP8266) || defined(ESP32)
+#define GHI_ESP_BUILD 1
+#else
+#define GHI_ESP_BUILD 0
 #endif
 
+
+#if GHC_LIB_DEBUG
+#define GHI_DEBUG_LOG(fmt, ...) do { Serial.printf("%s:%d in %s: " fmt "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ## __VA_ARGS__); } while(0)
+#else
+#define GHI_DEBUG_LOG(fmt, ...) do {} while(0)
+#endif
+
+
+// Modules
+
+#define GH_MOD_INFO (1ul << 0)
+#define GH_MOD_FSBR (1ul << 1)
+#define GH_MOD_FORMAT (1ul << 2)
+#define GH_MOD_FETCH (1ul << 3)
+#define GH_MOD_UPLOAD (1ul << 4)
+#define GH_MOD_OTA (1ul << 5)
+#define GH_MOD_OTA_URL (1ul << 6)
+#define GH_MOD_REBOOT (1ul << 7)
+#define GH_MOD_SET (1ul << 8)
+#define GH_MOD_READ (1ul << 9)
+#define GH_MOD_DELETE (1ul << 10)
+#define GH_MOD_RENAME (1ul << 11)
+#define GH_MOD_SERIAL (1ul << 12)
+#define GH_MOD_BT (1ul << 13)
+#define GH_MOD_WS (1ul << 14)
+#define GH_MOD_MQTT (1ul << 15)
+#define GH_MOD_HTTP (1ul << 16)
+
+#define GHC_MODS_ENABLED 0xFFFF
+#define GHC_MODS_DISABLED ((~GHC_MODS_ENABLED) & 0xFFFF)
+
+// FS
+
+#define GHC_FS_NONE 0
+#define GHC_FS_LITTLEFS 1
+#define GHC_FS_SPIFFS 2
+
+#if !GHI_ESP_BUILD
+#undef GHC_FS
+#define GHC_FS GHC_FS_NONE
+#endif
+
+#if GHC_FS == GHC_FS_LITTLEFS
+#define GHI_FS LittleFS
+#elif GHC_FS == GHC_FS_SPIFFS
+#define GHI_FS SPIFFS
+#else
+#define GHI_FS !!!
+#endif
+
+// IMPL
 
 #define GH_IMPL_NONE 0
 #define GH_IMPL_SYNC 1
@@ -25,7 +104,7 @@
 
 #ifndef GH_IMPL
 
-#if !defined(GH_ESP_BUILD)
+#if GHI_ESP_BUILD
 #define GH_IMPL GH_IMPL_NONE
 #elif defined(GH_ASYNC)
 #define GH_IMPL GH_IMPL_ASYNC
@@ -41,11 +120,4 @@
 
 #ifndef GH_HTTP_IMPL
 #define GH_HTTP_IMPL GH_IMPL
-#endif
-
-
-#ifdef GH_LIB_DEBUG
-#define GH_DEBUG_LOG(fmt, ...) do { Serial.printf("%s:%d in %s: " fmt "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ## __VA_ARGS__); } while(0)
-#else
-#define GH_DEBUG_LOG(fmt, ...) do {} while(0)
 #endif

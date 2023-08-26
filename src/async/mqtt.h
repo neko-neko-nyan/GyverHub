@@ -32,7 +32,7 @@ class HubMQTT {
     virtual const char* getPrefix() = 0;
     virtual const char* getID() = 0;
     void beginMQTT() {
-        mqtt.onConnect([this](GH_UNUSED bool pres) {
+        mqtt.onConnect([this](GHI_UNUSED bool pres) {
             String sub_topic(getPrefix());
             mqtt.subscribe(sub_topic.c_str(), qos);
 
@@ -50,19 +50,19 @@ class HubMQTT {
 
             String online(F("online"));
             sendMQTT(status, online);
-            GH_DEBUG_LOG("MQTT connected");
+            GHI_DEBUG_LOG("MQTT connected");
             mqtt_tmr = millis();
         });
 
-        mqtt.onDisconnect([this](GH_UNUSED AsyncMqttClientDisconnectReason reason) {
+        mqtt.onDisconnect([this](GHI_UNUSED AsyncMqttClientDisconnectReason reason) {
             String m_id("DEV-");
             m_id += String(random(0xffffff), HEX);
             mqtt.setClientId(m_id.c_str());
-            GH_DEBUG_LOG("MQTT disconnected");
+            GHI_DEBUG_LOG("MQTT disconnected");
             mqtt_tmr = millis();
         });
 
-        mqtt.onMessage([this](char* topic, char* data, GH_UNUSED AsyncMqttClientMessageProperties prop, size_t len, GH_UNUSED size_t index, GH_UNUSED size_t total) {
+        mqtt.onMessage([this](char* topic, char* data, GHI_UNUSED AsyncMqttClientMessageProperties prop, size_t len, GHI_UNUSED size_t index, GHI_UNUSED size_t total) {
             char buf[len + 1];
             memcpy(buf, data, len);
             buf[len] = 0;
@@ -75,9 +75,9 @@ class HubMQTT {
     }
 
     void tickMQTT() {
-        if (mq_configured && !mqtt.connected() && (!mqtt_tmr || millis() - mqtt_tmr > GH_MQTT_RECONNECT)) {
+        if (mq_configured && !mqtt.connected() && (!mqtt_tmr || millis() - mqtt_tmr > GHC_MQTT_RECONNECT)) {
             mqtt_tmr = millis();
-            GH_DEBUG_LOG("MQTT reconnecting");
+            GHI_DEBUG_LOG("MQTT reconnecting");
             mqtt.connect();
         }
     }

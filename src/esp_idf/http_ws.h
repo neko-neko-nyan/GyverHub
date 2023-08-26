@@ -67,7 +67,7 @@ private:
         res = httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
         if (res != ESP_OK) return res;
 
-        res = httpd_resp_set_hdr(req, "Cache-Control", GH_CACHE_PRD);
+        res = httpd_resp_set_hdr(req, "Cache-Control", GHC_PORTAL_CACHE);
         if (res != ESP_OK) return res;
 
         const char *p = strrchr(req->uri, '?');
@@ -83,12 +83,12 @@ private:
         const char *name = (const char*) req->user_ctx;
 
         int fd = open(name, O_RDONLY);
-        // File file = GH_FS.open(name);
+        // File file = GHI_FS.open(name);
 
         esp_err_t res = setCorsHeaders(req);
         if (res != ESP_OK) return res;
 
-        res = httpd_resp_set_hdr(req, "Cache-Control", GH_CACHE_PRD);
+        res = httpd_resp_set_hdr(req, "Cache-Control", GHC_PORTAL_CACHE);
         if (res != ESP_OK) return res;
 
         bool gzip;
@@ -128,7 +128,7 @@ private:
     static esp_err_t handlerDownload(httpd_req_t *req) {
         HubHTTP *self = (HubHTTP*) req->user_ctx;
 
-        File file = GH_FS.open(req->uri);  // TODO: uri
+        File file = GHI_FS.open(req->uri);  // TODO: uri
         if (!file) {
             httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File not found");
             return ESP_FAIL;
@@ -182,7 +182,7 @@ private:
         Serial.println(filename);
 
         gyverhub::mkdirRecursive(filename);
-        File file = GH_FS.open(filename, "w");
+        File file = GHI_FS.open(filename, "w");
         if (!file) {
             free(filename);
             httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to create file");
@@ -200,7 +200,7 @@ private:
                 }
 
                 file.close();
-                GH_FS.remove(filename);
+                GHI_FS.remove(filename);
                 free(filename);
 
                 httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to receive file");
@@ -209,7 +209,7 @@ private:
 
             if (received && (received != file.write((uint8_t*) buf, received))) {
                 file.close();
-                GH_FS.remove(filename);
+                GHI_FS.remove(filename);
                 free(filename);
 
                 httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to write file to storage");
@@ -352,11 +352,11 @@ protected:
         GH__SETH(HTTP_GET, "/hub_discover_all", HubHTTP::handlerSendString, "OK");
         
 
-#ifndef GH_NO_FS
-        GH__SETH(HTTP_GET, "/hub_http_cfg", HubHTTP::handlerSendString, "{\"upload\":" GH_HTTP_UPLOAD ",\"download\":" GH_HTTP_DOWNLOAD ",\"ota\":" GH_HTTP_OTA ",\"path\":\"" GH_PUBLIC_PATH "\"}");
+#if GHC_FS != GHC_FS_NONE
+        GH__SETH(HTTP_GET, "/hub_http_cfg", HubHTTP::handlerSendString, "{\"upload\":" GH_HTTP_UPLOAD ",\"download\":" GH_HTTP_DOWNLOAD ",\"ota\":" GH_HTTP_OTA ",\"path\":\"" GHC_PUBLIC_PATH "\"}");
 
 #ifndef GH_NO_HTTP_DOWNLOAD
-        GH__SETH(HTTP_GET, GH_PUBLIC_PATH "/*", HubHTTP::handlerDownload, this);
+        GH__SETH(HTTP_GET, GHC_PUBLIC_PATH "/*", HubHTTP::handlerDownload, this);
 #endif
 
 #ifndef GH_NO_HTTP_UPLOAD
@@ -417,7 +417,7 @@ private:
 
     esp_err_t _handler2(httpd_req_t *req) {
         if (req->method == HTTP_GET) {
-            GH_DEBUG_LOG("WS connected");
+            GHI_DEBUG_LOG("WS connected");
             return ESP_OK;
         }
 
@@ -538,7 +538,7 @@ protected:
         }
     }
 
-    void answerWS(String& answ) {
+    void answerWS(const String& answ) {
         sendWS(answ);
     }
 };

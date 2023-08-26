@@ -31,4 +31,4 @@ struct GHparser {
 char* GH_splitter(char* list, char div = ',');
 
 void GH_listDir(String& str, const String& path = "/", char div = ',');
-void GH_showFiles(String& answ, const String& path, GH_UNUSED uint8_t levels = 0, uint16_t* count = nullptr);
+void GH_showFiles(String& answ, const String& path, GHI_UNUSED uint8_t levels = 0, uint16_t* count = nullptr);

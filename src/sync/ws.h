@@ -10,23 +10,23 @@
 class HubWS {
     // ============ PROTECTED =============
    protected:
-    HubWS() : ws(GH_WS_PORT, "", "hub") {}
+    HubWS() : ws(GHC_WS_PORT, "", "hub") {}
 
     virtual void parse(char* url, GHconn_t from) = 0;
 
     void beginWS() {
-        ws.onEvent([this](uint8_t num, WStype_t type, uint8_t* data, GH_UNUSED size_t len) {
+        ws.onEvent([this](uint8_t num, WStype_t type, uint8_t* data, GHI_UNUSED size_t len) {
             switch (type) {
                 case WStype_CONNECTED:
-                    GH_DEBUG_LOG("WS connected");
+                    GHI_DEBUG_LOG("WS connected");
                     break;
 
                 case WStype_DISCONNECTED:
-                    GH_DEBUG_LOG("WS disconnected");
+                    GHI_DEBUG_LOG("WS disconnected");
                     break;
 
                 case WStype_ERROR:
-                    GH_DEBUG_LOG("WS error");
+                    GHI_DEBUG_LOG("WS error");
                     break;
 
                 case WStype_TEXT: {

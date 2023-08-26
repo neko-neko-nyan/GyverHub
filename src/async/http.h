@@ -12,12 +12,10 @@
 #endif
 #endif
 
-#ifndef GH_NO_FS
-#if (GH_FS == LittleFS)
+#if GHC_FS == GHC_FS_LITTLEFS
 #include <LittleFS.h>
-#elif (GH_FS == SPIFFS)
+#elif GHC_FS == GHC_FS_SPIFFS
 #include <SPIFFS.h>
-#endif
 #endif
 
 #ifndef GH_NO_DNS
@@ -49,7 +47,7 @@ class HubHTTP {
    public:
     AsyncWebServer server;
 
-    HubHTTP() : server(GH_HTTP_PORT) {}
+    HubHTTP() : server(GHC_HTTP_PORT) {}
 
     // ============ PROTECTED =============
    protected:
@@ -59,15 +57,15 @@ class HubHTTP {
             req->send(resp);
         });
 
-#ifndef GH_NO_FS
+#if GHC_FS != GHC_FS_NONE
         server.on("/hub_http_cfg", HTTP_GET, [this](AsyncWebServerRequest* req) {
-            AsyncWebServerResponse* resp = req->beginResponse(200, F("text/plain"), F("{\"upload\":" GH_HTTP_UPLOAD ",\"download\":" GH_HTTP_FETCH ",\"ota\":" GH_HTTP_OTA ",\"path\":\"" GH_PUBLIC_PATH "\"}"));
+            AsyncWebServerResponse* resp = req->beginResponse(200, F("text/plain"), F("{\"upload\":" GH_HTTP_UPLOAD ",\"download\":" GH_HTTP_FETCH ",\"ota\":" GH_HTTP_OTA ",\"path\":\"" GHC_PUBLIC_PATH "\"}"));
             req->send(resp);
         });
 
 #ifndef GH_NO_HTTP_FETCH
-        server.on(GH_PUBLIC_PATH "*", HTTP_GET, [this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse(GH_FS, request->url(), gyverhub::getMimeByPath(request->url().c_str(), request->url().length()));
+        server.on(GHC_PUBLIC_PATH "*", HTTP_GET, [this](AsyncWebServerRequest* request) {
+            AsyncWebServerResponse* response = request->beginResponse(GHI_FS, request->url(), gyverhub::getMimeByPath(request->url().c_str(), request->url().length()));
             request->send(response);
         });
 #endif
@@ -78,7 +76,7 @@ class HubHTTP {
             [this](AsyncWebServerRequest* request, String filename, size_t index, uint8_t* data, size_t len, bool final) {
                 if (!index) {
                     gyverhub::mkdirRecursive(filename.c_str());
-                    file = GH_FS.open(filename, "w");
+                    file = GHI_FS.open(filename, "w");
                     if (!file) {
                         AsyncWebServerResponse* resp = request->beginResponse(500, F("text/plain"), F("FAIL"));
                         request->send(resp);
@@ -188,21 +186,21 @@ class HubHTTP {
             request->send(response);
         });
 #else
-#ifndef GH_NO_FS
+#if GHC_FS != GHC_FS_NONE
         server.on("/", HTTP_GET, [this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse(GH_FS, "/hub/index.html.gz", "text/html");
+            AsyncWebServerResponse* response = request->beginResponse(GHI_FS, "/hub/index.html.gz", "text/html");
             gzip_h(response);
             cache_h(response);
             request->send(response);
         });
         server.on("/script.js", HTTP_GET, [this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse(GH_FS, "/hub/script.js.gz", "text/javascript");
+            AsyncWebServerResponse* response = request->beginResponse(GHI_FS, "/hub/script.js.gz", "text/javascript");
             gzip_h(response);
             cache_h(response);
             request->send(response);
         });
         server.on("/style.css", HTTP_GET, [this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse(GH_FS, "/hub/style.css.gz", "text/css");
+            AsyncWebServerResponse* response = request->beginResponse(GHI_FS, "/hub/style.css.gz", "text/css");
             gzip_h(response);
             cache_h(response);
             request->send(response);
@@ -243,7 +241,7 @@ class HubHTTP {
         response->addHeader("Content-Encoding", "gzip");
     }
     void cache_h(AsyncWebServerResponse* response) {
-        response->addHeader(F("Cache-Control"), GH_CACHE_PRD);
+        response->addHeader(F("Cache-Control"), GHC_PORTAL_CACHE);
     }
     File file;
 

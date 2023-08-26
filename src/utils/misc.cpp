@@ -21,12 +21,11 @@ char* GH_splitter(char* list, char div) {
 }
 
 // ========================== FS ==========================
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_FS
+#if GHC_FS != GHC_FS_NONE
 void GH_listDir(String& str, const String& path, char div) {
     str = "";
 #ifdef ESP8266
-    Dir dir = GH_FS.openDir(path);
+    Dir dir = GHI_FS.openDir(path);
     while (dir.next()) {
         if (dir.isFile() && dir.fileName().length()) {
             str += path;
@@ -35,7 +34,7 @@ void GH_listDir(String& str, const String& path, char div) {
         }
     }
 #else  // ESP32
-    File root = GH_FS.open(path.c_str());
+    File root = GHI_FS.open(path.c_str());
     if (!root || !root.isDirectory()) return;
     File file;
     while (file = root.openNextFile()) {
@@ -50,9 +49,9 @@ void GH_listDir(String& str, const String& path, char div) {
     if (str.length()) str.remove(str.length() - 1);
 }
 
-void GH_showFiles(String& answ, const String& path, GH_UNUSED uint8_t levels, uint16_t* count) {
+void GH_showFiles(String& answ, const String& path, GHI_UNUSED uint8_t levels, uint16_t* count) {
 #ifdef ESP8266
-    Dir dir = GH_FS.openDir(path);
+    Dir dir = GHI_FS.openDir(path);
     while (dir.next()) {
         if (dir.isDirectory()) {
             String p(path);
@@ -65,7 +64,7 @@ void GH_showFiles(String& answ, const String& path, GH_UNUSED uint8_t levels, ui
                 *count += answ.length();
                 answ = "";
             }
-            Dir sdir = GH_FS.openDir(p);
+            Dir sdir = GHI_FS.openDir(p);
             GH_showFiles(answ, p);
         }
         if (dir.isFile() && dir.fileName().length()) {
@@ -83,7 +82,7 @@ void GH_showFiles(String& answ, const String& path, GH_UNUSED uint8_t levels, ui
     }
 
 #else  // ESP32
-    File root = GH_FS.open(path.c_str());
+    File root = GHI_FS.open(path.c_str());
     if (!root || !root.isDirectory()) return;
     File file;
     while (file = root.openNextFile()) {
@@ -98,7 +97,7 @@ void GH_showFiles(String& answ, const String& path, GH_UNUSED uint8_t levels, ui
             if (levels) GH_showFiles(answ, file.path(), levels - 1);
         } else {
             answ += '\"';
-            if (levels != GH_FS_DEPTH) answ += path;
+            if (levels != GHC_FS_MAX_DEPTH) answ += path;
             answ += '/';
             answ += file.name();
             answ += "\":";
@@ -112,5 +111,4 @@ void GH_showFiles(String& answ, const String& path, GH_UNUSED uint8_t levels, ui
     }
 #endif
 }
-#endif
 #endif

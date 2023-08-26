@@ -40,12 +40,12 @@ private:
             String online("online");
             self->sendMQTT(status, online);
 
-            GH_DEBUG_LOG("MQTT connected");
+            GHI_DEBUG_LOG("MQTT connected");
             break;
         }
 
         case MQTT_EVENT_DISCONNECTED:
-            GH_DEBUG_LOG("MQTT disconnected");
+            GHI_DEBUG_LOG("MQTT disconnected");
             break;
 
         case MQTT_EVENT_DATA: {

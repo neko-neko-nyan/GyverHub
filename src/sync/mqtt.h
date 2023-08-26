@@ -48,9 +48,9 @@ class HubMQTT {
 
     void tickMQTT() {
         if (mq_configured) {
-            if (!mqtt.connected() && (!mqtt_tmr || millis() - mqtt_tmr > GH_MQTT_RECONNECT)) {
+            if (!mqtt.connected() && (!mqtt_tmr || millis() - mqtt_tmr > GHC_MQTT_RECONNECT)) {
                 mqtt_tmr = millis();
-                GH_DEBUG_LOG("MQTT reconnecting");
+                GHI_DEBUG_LOG("MQTT reconnecting");
                 connectMQTT();
             }
             mqtt.loop();
@@ -109,9 +109,9 @@ class HubMQTT {
             sub_topic += getID();
             sub_topic += "/#";
             mqtt.subscribe(sub_topic.c_str(), qos);
-            GH_DEBUG_LOG("MQTT connected");
+            GHI_DEBUG_LOG("MQTT connected");
         } else {
-            GH_DEBUG_LOG("MQTT connect failed");
+            GHI_DEBUG_LOG("MQTT connect failed");
         }
     }
     void _setupMQTT(const char* login, const char* pass, uint8_t nqos, bool nret) {

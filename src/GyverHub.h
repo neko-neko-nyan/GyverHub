@@ -1,5 +1,4 @@
-#ifndef _GyverHUB_h
-#define _GyverHUB_h
+#pragma once
 
 #include <Arduino.h>
 
@@ -13,43 +12,37 @@
 #include "utils/flags.h"
 #include "ui/log.h"
 #include "utils/misc.h"
-#include "utils/modules.h"
 #include "utils/stats.h"
 #include "utils2/base64.h"
 #include "utils2/timer.h"
 #include "utils2/json.h"
 #include "utils2/files.h"
 
-#ifdef GH_ESP_BUILD
+#if GHI_ESP_BUILD
 #include <FS.h>
+#endif
 
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
-#ifndef GH_NO_OTA
-#ifndef GH_NO_OTA_URL
+#if GHI_MOD_ENABLED(GH_MOD_OTA_URL)
 #include <ESP8266httpUpdate.h>
-#endif
 #endif
 #endif
 
 #ifdef ESP32
 #include <WiFi.h>
-#ifndef GH_NO_OTA
+#if GHI_MOD_ENABLED(GH_MOD_OTA)
 #include <Update.h>
-#ifndef GH_NO_OTA_URL
+#endif
+#if GHI_MOD_ENABLED(GH_MOD_OTA_URL)
 #include <HTTPUpdate.h>
 #endif
 #endif
-#endif
 
-#ifndef GH_NO_FS
-#if (GH_FS == LittleFS)
+#if GHC_FS == GHC_FS_LITTLEFS
 #include <LittleFS.h>
-#elif (GH_FS == SPIFFS)
+#elif GHC_FS == GHC_FS_SPIFFS
 #include <SPIFFS.h>
-#endif
-#endif
-
 #endif
 
 #if GH_MQTT_IMPL == GH_IMPL_ASYNC
@@ -62,7 +55,8 @@
 
 class HubMQTT {
    public:
-    void setupMQTT(const char* host, uint16_t port, const char* login = nullptr, const char* pass = nullptr, uint8_t nqos = 0, bool nret = 0) {}
+    void setupMQTT(GHI_UNUSED const char* host, GHI_UNUSED uint16_t port, GHI_UNUSED const char* login = nullptr, GHI_UNUSED const char* pass = nullptr,
+     GHI_UNUSED uint8_t nqos = 0, GHI_UNUSED bool nret = 0) {}
 };
 
 #endif
@@ -98,7 +92,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         prefix = nprefix;
         name = nname;
         icon = nicon;
-#ifdef GH_ESP_BUILD
+#if GHI_ESP_BUILD
         if (nid) ultoa((nid <= 0xfffff) ? (nid + 0xfffff) : nid, id, HEX);
         else {
             uint8_t mac[6];
@@ -108,26 +102,13 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 #else
         ultoa((nid <= 0x100000) ? (nid + 0x100000) : nid, id, HEX);
 #endif
-
-#ifdef GH_NO_FS
-        modules.unset(GH_MOD_FSBR | GH_MOD_FORMAT | GH_MOD_FETCH | GH_MOD_UPLOAD | GH_MOD_OTA | GH_MOD_OTA_URL | GH_MOD_DELETE | GH_MOD_RENAME);
-#endif
-#ifdef GH_NO_OTA
-        modules.unset(GH_MOD_OTA);
-#endif
-#ifdef GH_NO_OTA_URL
-        modules.unset(GH_MOD_OTA_URL);
-#endif
-#ifndef GH_ESP_BUILD
-        modules.unset(GH_MOD_REBOOT | GH_MOD_FSBR | GH_MOD_FORMAT | GH_MOD_FETCH | GH_MOD_UPLOAD | GH_MOD_OTA | GH_MOD_OTA_URL | GH_MOD_DELETE | GH_MOD_RENAME);
-#endif
     }
 
     // ========================== SETUP ==========================
 
     // запустить
     void begin() {
-        GH_DEBUG_LOG("called");
+        GHI_DEBUG_LOG("called");
 #if GH_HTTP_IMPL != GH_IMPL_NONE
         beginWS();
         beginHTTP();
@@ -136,13 +117,11 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         beginMQTT();
 #endif
 
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_FS
+#if GHC_FS != GHC_FS_NONE
 #ifdef ESP8266
-        fs_mounted = GH_FS.begin();
+        fs_mounted = GHI_FS.begin();
 #else
-        fs_mounted = GH_FS.begin(true);
-#endif
+        fs_mounted = GHI_FS.begin(true);
 #endif
 #endif
         running_f = true;
@@ -150,7 +129,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 
     // остановить
     void end() {
-        GH_DEBUG_LOG("called");
+        GHI_DEBUG_LOG("called");
 #if GH_HTTP_IMPL != GH_IMPL_NONE
         endWS();
         endHTTP();
@@ -172,9 +151,6 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
     void setBufferSize(uint16_t size) {
         buf_size = size;
     }
-
-    // включение/отключение системных модулей
-    GHmodule modules;
 
     // ========================== PIN ==========================
 
@@ -246,9 +222,11 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
     }
 
     // подключить функцию-обработчик перезагрузки. Будет вызвана перед перезагрузкой
-    void onReboot(void (*handler)(GHreason_t r)) {
-#ifdef GH_ESP_BUILD
-        reboot_cb = *handler;
+    void onReboot(void (*handler)(GHreason_t)) {
+#if GHI_ESP_BUILD
+        reboot_cb = handler;
+#else
+        (void) handler;
 #endif
     }
 
@@ -268,9 +246,10 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 
     // подключить обработчик запроса клиента
     void onRequest(bool (*handler)(const char* name, const char* value, GHclient nclient, GHcommand cmd)) {
-        req_cb = *handler;
+        req_cb = handler;
     }
 
+#if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_FETCH)
     // ========================= FETCH ==========================
 
     // подключить обработчик скачивания
@@ -279,44 +258,33 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
     }
 
     // отправить файл (вызывать в обработчике onFetch)
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_FS
     void fetchFile(const char* path) {
-        file_d = GH_FS.open(path, "r");
+        file_d = GHI_FS.open(path, "r");
     }
 
     template<typename T>
     void fetchFile(T f) {
         file_d = f;
     }
-#endif
-#endif
 
     // отправить сырые данные (вызывать в обработчике onFetch)
     void fetchBytes(uint8_t* bytes, uint32_t size) {
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_FS
         file_b = bytes;
         file_b_size = size;
         file_b_pgm = 0;
-#endif
-#endif
     }
     // отправить сырые данные из PGM (вызывать в обработчике onFetch)
     void fetchBytes_P(const uint8_t* bytes, uint32_t size) {
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_FS
         file_b = bytes;
         file_b_size = size;
         file_b_pgm = 1;
-#endif
-#endif
     }
+#endif
 
     // ========================= DATA ==========================
     // подключить обработчик данных (см. GyverHub.js API)
     void onData(void (*handler)(const char* name, const char* value)) {
-        data_cb = *handler;
+        data_cb = handler;
     }
 
     // ответить клиенту. Вызывать в обработчике onData (см. GyverHub.js API)
@@ -458,13 +426,15 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 
     // автоматически отправлять новое состояние на get-топик при изменении через set (умолч. false)
     void sendGetAuto(bool v) {
-#ifdef GH_ESP_BUILD
+#if GHI_ESP_BUILD
         autoGet_f = v;
+#else
+        (void) v;
 #endif
     }
 
     // отправить имя-значение на get-топик (MQTT)
-    void sendGet(GH_UNUSED const String& name, GH_UNUSED const String& value) {
+    void sendGet(GHI_UNUSED const String& name, GHI_UNUSED const String& value) {
         if (!running_f) return;
 #if GH_MQTT_IMPL != GH_IMPL_NONE
         String topic(prefix);
@@ -477,7 +447,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
     }
 
     // отправить значение по имени компонента на get-топик (MQTT) (значение будет прочитано в build). Имена можно передать списком через запятую
-    void sendGet(GH_UNUSED const String& name) {
+    void sendGet(GHI_UNUSED const String& name) {
 #if GH_MQTT_IMPL != GH_IMPL_NONE
         if (!running_f || !build_cb) return;
 
@@ -519,18 +489,28 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
     void parse(char* url, const char* value, GHconn_t from) {
         if (!running_f) return;
 
-        if (!modules.read(GH_MOD_SERIAL) && from == GH_SERIAL) return;
-        else if (!modules.read(GH_MOD_BT) && from == GH_BT) return;
-        else if (!modules.read(GH_MOD_WS) && from == GH_WS) return;
-        else if (!modules.read(GH_MOD_HTTP) && from == GH_HTTP) return;
-        else if (!modules.read(GH_MOD_MQTT) && from == GH_MQTT) return;
+#if !GHI_MOD_ENABLED(GH_MOD_SERIAL)
+        if (from == GH_SERIAL) return;
+#endif
+#if !GHI_MOD_ENABLED(GH_MOD_BT)
+        if (from == GH_BT) return;
+#endif
+#if !GHI_MOD_ENABLED(GH_MOD_WS)
+        if (from == GH_WS) return;
+#endif
+#if !GHI_MOD_ENABLED(GH_MOD_HTTP)
+        if (from == GH_HTTP) return;
+#endif
+#if !GHI_MOD_ENABLED(GH_MOD_MQTT)
+        if (from == GH_MQTT) return;
+#endif
 
-#if defined(GH_ESP_BUILD) && !defined(GH_NO_FS) && !defined(GH_NO_OTA) && !defined(GH_NO_OTA_URL)
+#if GHI_ESP_BUILD && !defined(GH_NO_FS) && !defined(GH_NO_OTA) && !defined(GH_NO_OTA_URL)
         if (ota_url_f) return;
 #endif
 
         if (!strcmp(url, prefix)) {  // == prefix
-            GH_DEBUG_LOG("Event: GH_DISCOVER_ALL from %d", from);
+            GHI_DEBUG_LOG("Event: GH_DISCOVER_ALL from %d", from);
             GHclient client(from, value);
             client_ptr = &client;
             answerDiscover();
@@ -542,7 +522,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         if (strcmp(p.str[1], id)) return;      // wrong id
 
         if (p.size == 2) {
-            GH_DEBUG_LOG("Event: GH_DISCOVER from %d", from);
+            GHI_DEBUG_LOG("Event: GH_DISCOVER from %d", from);
             GHclient client(from, value);
             client_ptr = &client;
             answerDiscover();
@@ -550,7 +530,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         }
 
         if (p.size == 3) {
-            GH_DEBUG_LOG("Event: GH_UNKNOWN from %d (size == 3)", from);
+            GHI_DEBUG_LOG("Event: GH_UNKNOWN from %d (size == 3)", from);
             return;
         }
         // p.size >= 4
@@ -558,7 +538,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         const char* cmd = p.str[3];
         GHcommand cmdn = GH_getCmd(cmd);
         if (cmdn == GHcommand::UNKNOWN) {
-            GH_DEBUG_LOG("Event: GH_UNKNOWN from %d (cmdn == -1)", from);
+            GHI_DEBUG_LOG("Event: GH_UNKNOWN from %d (cmdn == -1)", from);
             return;
         }
 
@@ -572,24 +552,26 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
             return;
         }
 
-#if GH_MQTT_IMPL != GH_IMPL_NONE
+#if GH_MQTT_IMPL != GH_IMPL_NONE && (GHI_MOD_ENABLED(GH_MOD_READ) || GHI_MOD_ENABLED(GH_MOD_SET))
         // MQTT HOOK
         if (p.size == 4 && from == GH_MQTT && build_cb) {
+#if GHI_MOD_ENABLED(GH_MOD_READ)
              if (cmdn == GHcommand::READ) {
-                GH_DEBUG_LOG("Event: GH_READ_HOOK from %d", from);
-                if (modules.read(GH_MOD_READ)) sendGet(name);
+                GHI_DEBUG_LOG("Event: GH_READ_HOOK from %d", from);
+                sendGet(name);
                 return;
             }
-            
+#endif
+
+#if GHI_MOD_ENABLED(GH_MOD_SET)
             if (cmdn == GHcommand::SET) {
-                GH_DEBUG_LOG("Event: GH_SET_HOOK from %d", from);
-                if (modules.read(GH_MOD_SET)) {
-                    gyverhub::Builder::buildSet(build_cb, name, value, client);
-                    if (autoGet_f) sendGet(name, value);
-                    if (autoUpd_f) _sendUpdate(name, value);
-                }
+                GHI_DEBUG_LOG("Event: GH_SET_HOOK from %d", from);
+                gyverhub::Builder::buildSet(build_cb, name, value, client);
+                if (autoGet_f) sendGet(name, value);
+                if (autoUpd_f) _sendUpdate(name, value);
                 return;
             }
+#endif
         }
 #endif
         setFocus(from);
@@ -597,61 +579,52 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         if (p.size == 4) {
             switch (cmdn) {
                 case GHcommand::FOCUS:
-                    GH_DEBUG_LOG("Event: GH_FOCUS from %d", from);
+                    GHI_DEBUG_LOG("Event: GH_FOCUS from %d", from);
                     answerUI();
                     return;
 
                 case GHcommand::PING:
-                    GH_DEBUG_LOG("Event: GH_PING from %d", from);
+                    GHI_DEBUG_LOG("Event: GH_PING from %d", from);
                     answerType();
                     return;
 
                 case GHcommand::UNFOCUS:
-                    GH_DEBUG_LOG("Event: GH_UNFOCUS from %d", from);
+                    GHI_DEBUG_LOG("Event: GH_UNFOCUS from %d", from);
                     answerType();
                     clearFocus(from);
                     return;
-
+#if GHI_MOD_ENABLED(GH_MOD_INFO)
                 case GHcommand::INFO:
-                    GH_DEBUG_LOG("Event: GH_INFO from %d", from);
-                    if (modules.read(GH_MOD_INFO)) answerInfo();
+                    GHI_DEBUG_LOG("Event: GH_INFO from %d", from);
+                    answerInfo();
                     return;
-
-#ifdef GH_ESP_BUILD
+#endif
+#if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_FSBR)
                 case GHcommand::FSBR:
-                    GH_DEBUG_LOG("Event: GH_FSBR from %d", from);
-#ifndef GH_NO_FS
-                    if (modules.read(GH_MOD_FSBR)) {
-                        if (fs_mounted) answerFsbr();
-                        else answerType(F("fs_error"));
-                    } else
-#endif
-                    answerDsbl();
+                    GHI_DEBUG_LOG("Event: GH_FSBR from %d", from);
+                    if (fs_mounted) answerFsbr();
+                    else answerType(F("fs_error"));
                     return;
-
+#endif
+#if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_FORMAT)
                 case GHcommand::FORMAT:
-                    GH_DEBUG_LOG("Event: GH_FORMAT from %d", from);
-#ifndef GH_NO_FS
-                    if (modules.read(GH_MOD_FORMAT)) {
-                        GH_FS.format();
-                        GH_FS.end();
-                        fs_mounted = GH_FS.begin();
-                        answerFsbr();
-                    } else
-#endif
-                    answerDsbl();
+                    GHI_DEBUG_LOG("Event: GH_FORMAT from %d", from);
+                    GHI_FS.format();
+                    GHI_FS.end();
+                    fs_mounted = GHI_FS.begin();
+                    answerFsbr();
                     return;
-
+#endif
+#if GHI_ESP_BUILD && GHI_MOD_ENABLED(GH_MOD_REBOOT)
                 case GHcommand::REBOOT:
-                    GH_DEBUG_LOG("Event: GH_REBOOT from %d", from);
-                    if (modules.read(GH_MOD_REBOOT)) {
-                        reboot_f = GH_REB_BUTTON;
-                        answerType();
-                    }
+                    GHI_DEBUG_LOG("Event: GH_REBOOT from %d", from);
+                    reboot_f = GH_REB_BUTTON;
+                    answerType();
                     return;
 #endif
                 default:
-                    GH_DEBUG_LOG("Event: GH_UNKNOWN from %d (size == 4, cmdn == %d)", from, (int) cmdn);
+                    GHI_DEBUG_LOG("Event: GH_UNKNOWN from %d (size == 4, cmdn == %d)", from, (int) cmdn);
+                    answerDsbl();
                     return;
             }
         }
@@ -660,213 +633,166 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 
         switch (cmdn) {
             case GHcommand::DATA:
-                GH_DEBUG_LOG("Event: GH_DATA from %d", from);
+                GHI_DEBUG_LOG("Event: GH_DATA from %d", from);
                 answ_f = 0;
                 if (data_cb) data_cb(name, value);
                 if (!answ_f) answerType();
                 return;
-
-            case GHcommand::SET:
-                GH_DEBUG_LOG("Event: GH_SET from %d", from);
-                if (!build_cb || !modules.read(GH_MOD_SET)) {
+#if GHI_MOD_ENABLED(GH_MOD_SET)
+            case GHcommand::SET: {
+                GHI_DEBUG_LOG("Event: GH_SET from %d", from);
+                if (!build_cb) {
                     answerType();
-                } else {
-                    bool mustRefresh = gyverhub::Builder::buildSet(build_cb, name, value, client);
-#ifdef GH_ESP_BUILD
-                    if (autoGet_f) sendGet(name, value);
-#endif
-                    if (autoUpd_f) _sendUpdate(name, value);
-                    if (mustRefresh) answerUI();
-                    else if (!autoUpd_f) answerType();
+                    return;
                 }
+                
+                bool mustRefresh = gyverhub::Builder::buildSet(build_cb, name, value, client);
+#if GHI_ESP_BUILD
+                if (autoGet_f) sendGet(name, value);
+#endif
+                if (autoUpd_f) _sendUpdate(name, value);
+                if (mustRefresh) answerUI();
+                else if (!autoUpd_f) answerType();
                 return;
-
+            }
+#endif
             case GHcommand::CLI:
-                GH_DEBUG_LOG("Event: GH_CLI from %d", from);
+                GHI_DEBUG_LOG("Event: GH_CLI from %d", from);
                 answerType();
                 if (cli_cb) {
                     String str(value);
                     cli_cb(str);
                 }
                 return;
-
-#ifdef GH_ESP_BUILD
+#if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_DELETE)
             case GHcommand::DELETE:
-                GH_DEBUG_LOG("Event: GH_DELETE from %d", from);
-#ifndef GH_NO_FS
-                if (modules.read(GH_MOD_DELETE)) {
-                    GH_FS.remove(name);
-                    gyverhub::rmdirRecursive(name);
-                    answerFsbr();
-                } else
-#endif
-                answerDsbl();
+                GHI_DEBUG_LOG("Event: GH_DELETE from %d", from);
+                GHI_FS.remove(name);
+                gyverhub::rmdirRecursive(name);
+                answerFsbr();
                 return;
-
+#endif
+#if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_RENAME)
             case GHcommand::RENAME:
-                GH_DEBUG_LOG("Event: GH_RENAME from %d", from);
-#ifndef GH_NO_FS
-                if (modules.read(GH_MOD_RENAME)) {
-                    if (GH_FS.rename(name, value))
-                        answerFsbr();
-                    else answerErr(F("Rename failed"));
-                } else
+                GHI_DEBUG_LOG("Event: GH_RENAME from %d", from);
+                if (GHI_FS.rename(name, value))
+                    answerFsbr();
+                else answerErr(F("Rename failed"));
+                return;
 #endif
-                answerDsbl();
-                return;
-
+#if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_FETCH)
             case GHcommand::FETCH: {
-#ifdef GH_NO_FS
-                GH_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (disabled on CT)", from);
-                answerDsbl();
-                return;
-#else
-                if (!modules.read(GH_MOD_FETCH)) {
-                    GH_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (disabled on RT)", from);
-                    answerDsbl();
-                    return;
-                }
-
                 if (file_d || file_b) {
-                    GH_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (busy)", from);
+                    GHI_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (busy)", from);
                     answerType(F("fetch_err"));
                     return;
                 }
 
                 fetch_path = name;
                 if (fetch_cb) fetch_cb(fetch_path, true);
-                if (!file_d && !file_b) file_d = GH_FS.open(name, "r");
+                if (!file_d && !file_b) file_d = GHI_FS.open(name, "r");
                 if (!file_d && !file_b) {
-                    GH_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (not found)", from);
+                    GHI_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (not found)", from);
                     answerType(F("fetch_err"));
                     return;
                 }
 
-                GH_DEBUG_LOG("Event: GH_FETCH from %d", from);
+                GHI_DEBUG_LOG("Event: GH_FETCH from %d", from);
                 fs_client = client;
                 fs_tmr.reset();
                 uint32_t size = file_b ? file_b_size : file_d.size();
                 file_b_idx = 0;
                 dwn_chunk_count = 0;
-                dwn_chunk_amount = (size + GH_DOWN_CHUNK_SIZE - 1) / GH_DOWN_CHUNK_SIZE;  // round up
+                dwn_chunk_amount = (size + GHC_FETCH_CHUNK_SIZE - 1) / GHC_FETCH_CHUNK_SIZE;  // round up
                 answerType(F("fetch_start"));
                 return;
-#endif
             }
 
             case GHcommand::FETCH_CHUNK:
-#ifdef GH_NO_FS
-                GH_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (disabled on CT)", from);
-                answerDsbl();
-                return;
-#else
                 if ((!file_d && !file_b) || fs_client != client) {
-                    GH_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (closed or wrong clid)", from);
+                    GHI_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (closed or wrong clid)", from);
                     answerType(F("fetch_err"));
                     return;
                 }
 
-                GH_DEBUG_LOG("Event: GH_FETCH_CHUNK from %d", from);
+                GHI_DEBUG_LOG("Event: GH_FETCH_CHUNK from %d", from);
                 fs_tmr.reset();
                 answerChunk();
                 dwn_chunk_count++;
                 if (dwn_chunk_count < dwn_chunk_amount)
                     return;
                 
-                GH_DEBUG_LOG("Event: GH_FETCH_FINISH from %d", from);
+                GHI_DEBUG_LOG("Event: GH_FETCH_FINISH from %d", from);
                 if (fetch_cb) fetch_cb(fetch_path, false);
                 if (file_d) file_d.close();
                 file_b = nullptr;
                 fetch_path.clear();
                 return;
-#endif
 
             case GHcommand::FETCH_STOP:
-#ifdef GH_NO_FS
-                GH_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (disabled on CT)", from);
-                answerDsbl();
-                return;
-#else
                 if ((!file_d && !file_b) || fs_client != client) {
-                    GH_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (closed or wrong clid)", from);
+                    GHI_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (closed or wrong clid)", from);
                     answerType(F("fetch_err"));
                     return;
                 }
 
-                GH_DEBUG_LOG("Event: GH_FETCH_ABORTED from %d", from);
+                GHI_DEBUG_LOG("Event: GH_FETCH_ABORTED from %d", from);
                 if (fetch_cb) fetch_cb(fetch_path, false);
                 if (file_d) file_d.close();
                 file_b = nullptr;
                 fetch_path.clear();
                 return;
 #endif
-
+#if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_UPLOAD)
             case GHcommand::UPLOAD:
-#ifdef GH_NO_FS
-                GH_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (disabled on CT)", from);
-                answerDsbl();
-                return;
-#else
-                if (!modules.read(GH_MOD_UPLOAD)) {
-                    GH_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (disabled on RT)", from);
-                    answerDsbl();
-                    return;
-                }
-
                 if (fs_upload_file) {
-                    GH_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (busy)", from);
+                    GHI_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (busy)", from);
                     answerType(F("upload_err"));
                     return;
                 }
 
                 gyverhub::mkdirRecursive(name);
-                fs_upload_file = GH_FS.open(name, "w");
+                fs_upload_file = GHI_FS.open(name, "w");
                 if (!fs_upload_file) {
-                    GH_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (not found)", from);
+                    GHI_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (not found)", from);
                     answerType(F("upload_err"));
                     return;
                 }
 
-                GH_DEBUG_LOG("Event: GH_UPLOAD from %d", from);
+                GHI_DEBUG_LOG("Event: GH_UPLOAD from %d", from);
                 fs_upload_client = client;
                 fs_upload_tmr.reset();
 
                 answerType(F("upload_start"));
                 return;
-#endif
 
             case GHcommand::UPLOAD_CHUNK: {
-#ifdef GH_NO_FS
-                GH_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (disabled on CT)", from);
-                answerDsbl();
-                return;
-#else
                 if (!fs_upload_file || fs_upload_client != client) {
-                    GH_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (closed or wrong clid)", from);
+                    GHI_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (closed or wrong clid)", from);
                     answerType(F("upload_err"));
                     return;
                 }
 
                 bool isLast = strcmp_P(name, PSTR("last")) == 0;
                 if (!isLast && strcmp_P(name, PSTR("next")) != 0) {
-                    GH_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (invalid name)", from);
+                    GHI_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (invalid name)", from);
                     answerType(F("upload_err"));
                     return;
                 }
 
-                GH_DEBUG_LOG("Event: GH_UPLOAD_CHUNK from %d", from);
+                GHI_DEBUG_LOG("Event: GH_UPLOAD_CHUNK from %d", from);
                 size_t len;
                 uint8_t *data = gyverhub::base64Decode(value, strlen(value), len);
 
                 if (fs_upload_file.write(data, len) != len) {
-                    GH_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (write failed)", from);
+                    GHI_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (write failed)", from);
                     fs_upload_file.close();
                     answerType(F("upload_err"));
                     return;
                 }
 
                 if (isLast) {
-                    GH_DEBUG_LOG("Event: GH_UPLOAD_FINISH from %d", from);
+                    GHI_DEBUG_LOG("Event: GH_UPLOAD_FINISH from %d", from);
                     fs_upload_file.close();
                     answerType(F("upload_end"));
                 } else {
@@ -874,35 +800,24 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
                     answerType(F("upload_next_chunk"));
                 }
                 return;
-#endif
             }
-
+#endif
+#if GHI_ESP_BUILD && GHI_MOD_ENABLED(GH_MOD_OTA)
             case GHcommand::OTA: {
-#ifdef GH_NO_OTA
-                GH_DEBUG_LOG("Event: GH_OTA_ERROR from %d (disabled on CT)", from);
-                answerDsbl();
-                return;
-#else
-                if (!modules.read(GH_MOD_OTA)) {
-                    GH_DEBUG_LOG("Event: GH_OTA_ERROR from %d (disabled on RT)", from);
-                    answerDsbl();
-                    return;
-                }
-
                 if (ota_f) {
-                    GH_DEBUG_LOG("Event: GH_OTA_ERROR from %d (busy)", from);
+                    GHI_DEBUG_LOG("Event: GH_OTA_ERROR from %d (busy)", from);
                     answerErr(F("Update already running"));
                     return;
                 }
 
                 bool isFlash = strcmp_P(name, PSTR("flash")) == 0;
                 if (!isFlash && strcmp_P(name, PSTR("fs")) != 0) {
-                    GH_DEBUG_LOG("Event: GH_OTA_ERROR from %d (invalid type)", from);
+                    GHI_DEBUG_LOG("Event: GH_OTA_ERROR from %d (invalid type)", from);
                     answerErr(F("Invalid type"));
                     return;
                 }
 
-                GH_DEBUG_LOG("Event: GH_OTA from %d", from);
+                GHI_DEBUG_LOG("Event: GH_OTA from %d", from);
                 size_t ota_size;
                 int ota_type;
                 if (isFlash) {
@@ -924,7 +839,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
                 }
 
                 if (!Update.begin(ota_size, ota_type)) {
-                    GH_DEBUG_LOG("Event: GH_OTA_ERROR from %d (Update.begin failed)", from);
+                    GHI_DEBUG_LOG("Event: GH_OTA_ERROR from %d (Update.begin failed)", from);
                     answerType(F("ota_err"));
                     return;
                 }
@@ -934,46 +849,44 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
                 ota_tmr.reset();
                 answerType(F("ota_start"));
                 return;
-#endif
             }
 
             case GHcommand::OTA_CHUNK: {
-#ifdef GH_NO_OTA
-                GH_DEBUG_LOG("Event: GH_OTA_ERROR from %d (disabled on CT)", from);
-                answerDsbl();
-                return;
-#else
                 if (!ota_f || ota_client != client) {
-                    GH_DEBUG_LOG("Event: GH_OTA_ERROR from %d (closed or wrong clid)", from);
+                    GHI_DEBUG_LOG("Event: GH_OTA_ERROR from %d (closed or wrong clid)", from);
                     answerType(F("ota_err"));
                     return;
                 }
 
                 bool isLast = strcmp_P(name, PSTR("last")) == 0;
                 if (!isLast && strcmp_P(name, PSTR("next")) != 0) {
-                    GH_DEBUG_LOG("Event: GH_OTA_ERROR from %d (invalid name)", from);
+                    GHI_DEBUG_LOG("Event: GH_OTA_ERROR from %d (invalid name)", from);
                     answerType(F("ota_err"));
                     return;
                 }
 
-                GH_DEBUG_LOG("Event: GH_OTA_CHUNK from %d", from);
+                GHI_DEBUG_LOG("Event: GH_OTA_CHUNK from %d", from);
                 size_t len;
                 uint8_t *data = gyverhub::base64Decode(value, strlen(value), len);
                 if (Update.write(data, len) != len) {
-                    GH_DEBUG_LOG("Event: GH_OTA_ERROR from %d (Update.write failed)", from);
+                    GHI_DEBUG_LOG("Event: GH_OTA_ERROR from %d (Update.write failed)", from);
                     ota_f = false;
+#ifdef ESP32
                     Update.abort();
+#else
+                    Update.begin(0);
+#endif
                     answerType(F("ota_err"));
                 }
 
                 if (isLast) {
-                    GH_DEBUG_LOG("Event: GH_OTA_FINISH from %d", from);
+                    GHI_DEBUG_LOG("Event: GH_OTA_FINISH from %d", from);
                     ota_f = false;
                     if (Update.end(true)) {
                         reboot_f = GH_REB_OTA;
                         answerType(F("ota_end"));
                     } else {
-                        GH_DEBUG_LOG("Event: GH_OTA_ERROR from %d (Update.end failed)", from);
+                        GHI_DEBUG_LOG("Event: GH_OTA_ERROR from %d (Update.end failed)", from);
                         answerType(F("ota_err"));
                     }
                 } else {
@@ -981,29 +894,18 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
                     ota_tmr.reset();
                 }
                 return;
-#endif
             }
-
+#endif
+#if GHI_ESP_BUILD && GHI_MOD_ENABLED(GH_MOD_OTA_URL)
             case GHcommand::OTA_URL: {
-#ifdef GH_NO_OTA_URL
-                GH_DEBUG_LOG("Event: GH_OTA_URL from %d (disabled on CT)", from);
-                answerDsbl();
-                return;
-#else
-                if (!modules.read(GH_MOD_OTA_URL)) {
-                    GH_DEBUG_LOG("Event: GH_OTA_URL from %d (disabled on CT)", from);
-                    answerDsbl();
-                    return;
-                }
-
                 bool isFlash = strcmp_P(name, PSTR("flash")) == 0;
                 if (!isFlash && strcmp_P(name, PSTR("fs")) != 0) {
-                    GH_DEBUG_LOG("Event: GH_OTA_URL from %d (invalid type)", from);
+                    GHI_DEBUG_LOG("Event: GH_OTA_URL from %d (invalid type)", from);
                     answerErr(F("Invalid type"));
                     return;
                 }
 
-                GH_DEBUG_LOG("Event: GH_OTA_URL from %d (start)", from);
+                GHI_DEBUG_LOG("Event: GH_OTA_URL from %d (start)", from);
                 answerType();
 
                 bool ok = 0;
@@ -1023,20 +925,20 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 #endif
                 ota_url_f = 0;
                 if (ok) {
-                    GH_DEBUG_LOG("Event: GH_OTA_URL from %d (finished)", from);
+                    GHI_DEBUG_LOG("Event: GH_OTA_URL from %d (finished)", from);
                     reboot_f = GH_REB_OTA_URL;
                     answerType(F("ota_url_ok"));
                 } else {
-                    GH_DEBUG_LOG("Event: GH_OTA_URL from %d (failed)", from);
+                    GHI_DEBUG_LOG("Event: GH_OTA_URL from %d (failed)", from);
                     answerType(F("ota_url_err"));
                 }
 
                 return;
-#endif
             }
 #endif
             default:
-                GH_DEBUG_LOG("Event: GH_UNKNOWN from %d (size == 5, cmdn == %d)", from, (int) cmdn);
+                GHI_DEBUG_LOG("Event: GH_UNKNOWN from %d (size == 5, cmdn == %d)", from, (int) cmdn);
+                answerDsbl();
                 return;
         }
     }
@@ -1065,28 +967,33 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         tickMQTT();
 #endif
 
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_OTA
-        if (ota_f && ota_tmr.isTimedOut(GH_CONN_TOUT * 1000ul)) {
-            GH_DEBUG_LOG("Event: GH_OTA_ABORTED from %d", ota_client.from);
+#if GHI_ESP_BUILD && GHI_MOD_ENABLED(GH_MOD_OTA)
+        if (ota_f && ota_tmr.isTimedOut(GHC_CONN_TOUT * 1000ul)) {
+            GHI_DEBUG_LOG("Event: GH_OTA_ABORTED from %d", ota_client.from);
+#ifdef ESP32
             Update.abort();
+#else
+            Update.begin(0);
+#endif
             ota_f = false;
         }
 #endif
-#ifndef GH_NO_FS
-        if (fs_upload_file && fs_upload_tmr.isTimedOut(GH_CONN_TOUT * 1000ul)) {
-            GH_DEBUG_LOG("Event: GH_UPLOAD_ABORTED from %d", fs_upload_client.from);
+#if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_UPLOAD)
+        if (fs_upload_file && fs_upload_tmr.isTimedOut(GHC_CONN_TOUT * 1000ul)) {
+            GHI_DEBUG_LOG("Event: GH_UPLOAD_ABORTED from %d", fs_upload_client.from);
             fs_upload_file.close();
         }
-
-        if ((file_d || file_b) && fs_tmr.isTimedOut(GH_CONN_TOUT * 1000ul)) {
-            GH_DEBUG_LOG("Event: GH_FETCH_ABORTED from %d", fs_client.from);
+#endif
+#if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_FETCH)
+        if ((file_d || file_b) && fs_tmr.isTimedOut(GHC_CONN_TOUT * 1000ul)) {
+            GHI_DEBUG_LOG("Event: GH_FETCH_ABORTED from %d", fs_client.from);
             if (fetch_cb) fetch_cb(fetch_path, false);
             if (file_d) file_d.close();
             file_b = nullptr;
             fetch_path = "";
         }
 #endif
+#if GHI_ESP_BUILD
         if (reboot_f) {
             if (reboot_cb) reboot_cb(reboot_f);
             delay(2000);
@@ -1101,7 +1008,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
     // =========================================================================================
    private:
     void _rebootOTA() {
-#ifdef GH_ESP_BUILD
+#if GHI_ESP_BUILD
         reboot_f = GH_REB_OTA;
 #endif
     }
@@ -1121,6 +1028,8 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         topic += id;
         topic += F("/status");
         sendMQTT(topic, mode);
+#else
+        (void) mode;
 #endif
     }
 
@@ -1128,11 +1037,11 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         if (req_cb && !req_cb(name, value, client, event)) return 0;  // forbidden
         return 1;
     }
-    bool _checkModule(GHmodule_t mod) {
-        return modules.read(mod);
+    bool _checkModule(uint32_t mod) {
+        return GHI_MOD_ENABLED(mod);
     }
 
-#if defined(GH_ESP_BUILD) && !defined(GH_NO_FS)
+#if GHC_FS != GHC_FS_NONE
     void _fetchStartHook(String& path, File** file, const uint8_t** bytes, uint32_t* size, bool* pgm) {
         if (!fetch_cb || file_d || file_b) return;  // busy
 
@@ -1161,12 +1070,12 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         answ.itemString(F("type"), F("info"));
 
         answ += F("\"info\":{\"version\":{");
-        answ.itemString(F("Library"), GH_LIB_VERSION);
+        answ.itemString(F("Library"), GHC_LIB_VERSION);
         if (version) answ.itemString(F("Firmware"), version);
 
         checkEndInfo(answ, GH_INFO_VERSION);
         answ += (F(",\"net\":{"));
-#ifdef GH_ESP_BUILD
+#if GHI_ESP_BUILD
         answ.itemString(F("Mode"), WiFi.getMode() == WIFI_AP ? F("AP") : (WiFi.getMode() == WIFI_STA ? F("STA") : F("AP_STA")));
         answ.itemString(F("MAC"), WiFi.macAddress());
         answ.itemString(F("SSID"), WiFi.SSID());
@@ -1177,16 +1086,16 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         checkEndInfo(answ, GH_INFO_NETWORK);
         answ += (F(",\"memory\":{"));
 
-#ifdef GH_ESP_BUILD
+#if GHI_ESP_BUILD
         answ.item(F("RAM"), String("[") + ESP.getFreeHeap() + ",0]");
 
-#ifndef GH_NO_FS
+#if GHC_FS != GHC_FS_NONE
 #ifdef ESP8266
         FSInfo fs_info;
-        GH_FS.info(fs_info);
+        GHI_FS.info(fs_info);
         answ.item(F("Flash"), String("[") + fs_info.usedBytes + ',' + fs_info.totalBytes + "]");
 #else
-        answ.item(F("Flash"), String("[") + GH_FS.usedBytes() + ',' + GH_FS.totalBytes() + "]");
+        answ.item(F("Flash"), String("[") + GHI_FS.usedBytes() + ',' + GHI_FS.totalBytes() + "]");
 #endif
 
         answ.item(F("Sketch"), String("[") + ESP.getSketchSize() + ',' + ESP.getFreeSketchSpace() + "]");
@@ -1196,7 +1105,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         checkEndInfo(answ, GH_INFO_MEMORY);
         answ += (F(",\"system\":{"));
         answ.itemInteger(F("Uptime"), millis() / 1000ul);
-#ifdef GH_ESP_BUILD
+#if GHI_ESP_BUILD
 #ifdef ESP8266
         answ.itemString(F("Platform"), F("ESP8266"));
 #else
@@ -1241,7 +1150,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         if (!build_cb) return answerType();
         bool chunked = buf_size;
 
-#ifdef GH_ESP_BUILD
+#if GHI_ESP_BUILD
         if (client_ptr->from == GH_WS || client_ptr->from == GH_MQTT) chunked = false;
 #endif
 
@@ -1287,13 +1196,12 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 
     // ======================= FSBR ========================
     void answerFsbr() {
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_FS
+#if GHC_FS != GHC_FS_NONE
         gyverhub::Json answ;
         answ.reserve(100);
         
         uint16_t count = 0;
-        GH_showFiles(answ, "/", GH_FS_DEPTH, &count);
+        GH_showFiles(answ, "/", GHC_FS_MAX_DEPTH, &count);
 
         answ.clear();
         answ.reserve(count + 50);
@@ -1301,7 +1209,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         answ.key(F("fs"));
         answ += '{';
         answ.itemInteger(F("/"), 0);
-        GH_showFiles(answ, "/", GH_FS_DEPTH);
+        GH_showFiles(answ, "/", GHC_FS_MAX_DEPTH);
         answ[answ.length() - 1] = '}';  // ',' = '}'
         answ += ',';
 
@@ -1310,16 +1218,15 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 
 #ifdef ESP8266
         FSInfo fs_info;
-        GH_FS.info(fs_info);
+        GHI_FS.info(fs_info);
         answ.itemInteger(F("total"), fs_info.totalBytes);
         answ.itemInteger(F("used"), fs_info.usedBytes);
 #else
-        answ.itemInteger(F("total"), GH_FS.totalBytes());
-        answ.itemInteger(F("used"), GH_FS.usedBytes());
+        answ.itemInteger(F("total"), GHI_FS.totalBytes());
+        answ.itemInteger(F("used"), GHI_FS.usedBytes());
 #endif
         answ.end();
         _answer(answ);
-#endif
 #else
         answerDsbl();
 #endif
@@ -1346,23 +1253,22 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         answ.itemString(F("icon"), icon);
         answ.itemInteger(F("PIN"), hash);
         answ.itemString(F("version"), version);
-        answ.itemInteger(F("max_upl"), GH_UPL_CHUNK_SIZE);
+        answ.itemInteger(F("max_upl"), GHC_UPLOAD_CHUNK_SIZE);
 #ifdef ATOMIC_FS_UPDATE
         answ.itemString(F("ota_t"), F("gz"));
 #else
         answ.itemString(F("ota_t"), F("bin"));
 #endif
-        answ.itemInteger(F("modules"), modules.mods);
+        answ.itemInteger(F("modules"), GHC_MODS_DISABLED);
         answ.end();
         _answer(answ);
     }
 
     // ======================= CHUNK ========================
     void answerChunk() {
-#ifdef GH_ESP_BUILD
-#ifndef GH_NO_FS
+#if GHC_FS != GHC_FS_NONE
         gyverhub::Json answ;
-        answ.reserve(GH_DOWN_CHUNK_SIZE + 100);
+        answ.reserve(GHC_FETCH_CHUNK_SIZE + 100);
         answ.begin();
         answ.appendId(id);
         answ.itemString(F("type"), F("fetch_next_chunk"));
@@ -1370,13 +1276,13 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         answ.itemInteger(F("amount"), dwn_chunk_amount);
         answ += F("\"data\":\"");
         if (file_b) {
-            size_t len = min((size_t) file_b_size, (size_t) GH_DOWN_CHUNK_SIZE);
+            size_t len = min((size_t) file_b_size, (size_t) GHC_FETCH_CHUNK_SIZE);
             size_t out_len;
             char *b64 = gyverhub::base64Encode(file_b + file_b_idx, len, file_b_pgm, out_len);
             answ.concat(b64, out_len);
             free(b64);
         } else {
-            size_t len = min((size_t) file_d.available(), (size_t) GH_DOWN_CHUNK_SIZE);
+            size_t len = min((size_t) file_d.available(), (size_t) GHC_FETCH_CHUNK_SIZE);
             uint8_t *data = (uint8_t *)malloc(len);
             len = file_d.read(data, len);
 
@@ -1394,13 +1300,11 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         answ.end();
         _answer(answ);
 #endif
-#endif
     }
 
     // ======================= ANSWER ========================
     void _answer(const String& answ, bool close = true) {
         if (!client_ptr) return;
-#ifdef GH_ESP_BUILD
         switch (client_ptr->from) {
 #if GH_HTTP_IMPL != GH_IMPL_NONE
             case GH_WS:
@@ -1429,7 +1333,6 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
             default:
                 break;
         }
-#endif
         if (close) client_ptr = nullptr;
     }
 
@@ -1459,7 +1362,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 
     // ========================== MISC ==========================
     void setFocus(GHconn_t from) {
-        focus_arr[from] = GH_CONN_TOUT;
+        focus_arr[from] = GHC_CONN_TOUT;
     }
     void clearFocus(GHconn_t from) {
         focus_arr[from] = 0;
@@ -1493,20 +1396,21 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
     int8_t focus_arr[GH_CONN_AMOUNT] = {};
     bool autoUpd_f = true;
 
-#ifdef GH_ESP_BUILD
+#if GHI_ESP_BUILD
     void (*reboot_cb)(GHreason_t r) = nullptr;
     bool autoGet_f = 0;
     GHreason_t reboot_f = GH_REB_NONE;
 
-#ifndef GH_NO_OTA_URL
+#if GHI_MOD_ENABLED(GH_MOD_OTA_URL)
     bool ota_url_f = 0;
 #endif
-#ifndef GH_NO_OTA
+#if GHI_MOD_ENABLED(GH_MOD_OTA)
     bool ota_f = false;
     gyverhub::Timer ota_tmr {};
     GHclient ota_client;
 #endif
-#ifndef GH_NO_FS
+#endif
+#if GHC_FS != GHC_FS_NONE
     bool fs_mounted = 0;
     // upload
     GHclient fs_upload_client;
@@ -1523,6 +1427,4 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
     uint16_t dwn_chunk_count = 0;
     uint16_t dwn_chunk_amount = 0;
 #endif
-#endif
 };
-#endif

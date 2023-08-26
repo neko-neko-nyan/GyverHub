@@ -23,12 +23,10 @@
 #endif
 #endif
 
-#ifndef GH_NO_FS
-#if (GH_FS == LittleFS)
+#if GHC_FS == GHC_FS_LITTLEFS
 #include <LittleFS.h>
-#elif (GH_FS == SPIFFS)
+#elif GHC_FS == GHC_FS_SPIFFS
 #include <SPIFFS.h>
-#endif
 #endif
 
 #ifndef GH_NO_DNS
@@ -45,7 +43,7 @@ class HubHTTP {
    public:
     GH_SERVER_T server;
 
-    HubHTTP() : server(GH_HTTP_PORT) {}
+    HubHTTP() : server(GHC_HTTP_PORT) {}
 
    protected:
     void answerHTTP(const String &answ) {
@@ -62,10 +60,10 @@ class HubHTTP {
                 if (handled) return;
             }
 
-// fetch file from GH_PUBLIC_PATH
+// fetch file from GHC_PUBLIC_PATH
 #if !defined(GH_NO_HTTP_PUBLIC) && !defined(GH_NO_FS)
             else if (server.uri().indexOf('.') > 0) {
-                String path(GH_PUBLIC_PATH);
+                String path(GHC_PUBLIC_PATH);
                 path += server.uri();
                 if (_handleFetch(path)) return;
             }
@@ -81,7 +79,7 @@ class HubHTTP {
                 return;
 
 #elif defined(GH_FILE_PORTAL)
-                File f = GH_FS.open(F("/hub/index.html.gz"), "r");
+                File f = GHI_FS.open(F("/hub/index.html.gz"), "r");
                 if (f) server.streamFile(f, F("text/html"));
                 else server.send(404);
                 return;
@@ -119,9 +117,9 @@ class HubHTTP {
                         server.send(503);
                         return;
                     }
-                    GH_DEBUG_LOG("HTTP upload");
+                    GHI_DEBUG_LOG("HTTP upload");
                     gyverhub::mkdirRecursive(path.c_str());
-                    file = GH_FS.open(path.c_str(), "w");
+                    file = GHI_FS.open(path.c_str(), "w");
                     if (!file) server.send(500);
 
                 } else if (upload.status == UPLOAD_FILE_WRITE) {
@@ -153,7 +151,7 @@ class HubHTTP {
                         server.send(503);
                         return;
                     }
-                    GH_DEBUG_LOG("HTTP ota");
+                    GHI_DEBUG_LOG("HTTP ota");
 
                     String type_s(server.arg(F("type")));
                     int ota_type = 0;
@@ -214,19 +212,19 @@ class HubHTTP {
 
 #elif defined(GH_FILE_PORTAL) && !defined(GH_NO_FS)
         server.on("/", [this]() {
-            File f = GH_FS.open(F("/hub/index.html.gz"), "r");
+            File f = GHI_FS.open(F("/hub/index.html.gz"), "r");
             if (f) server.streamFile(f, F("text/html"));
             else server.send(404);
         });
         server.on("/script.js", [this]() {
             cache_h();
-            File f = GH_FS.open(F("/hub/script.js.gz"), "r");
+            File f = GHI_FS.open(F("/hub/script.js.gz"), "r");
             if (f) server.streamFile(f, F("text/javascript"));
             else server.send(404);
         });
         server.on("/style.css", [this]() {
             cache_h();
-            File f = GH_FS.open(F("/hub/style.css.gz"), "r");
+            File f = GHI_FS.open(F("/hub/style.css.gz"), "r");
             if (f) server.streamFile(f, F("text/css"));
             else server.send(404);
         });
@@ -240,7 +238,7 @@ class HubHTTP {
         }
 #endif
 
-        server.begin(GH_HTTP_PORT);
+        server.begin(GHC_HTTP_PORT);
         server.enableCORS(true);
     }
 
@@ -261,9 +259,9 @@ class HubHTTP {
     virtual void parse(char *url, GHconn_t from) = 0;
     virtual void _rebootOTA() = 0;
     virtual bool _reqHook(const char *name, const char *value, GHclient client, GHcommand cmd) = 0;
-    virtual bool _checkModule(GHmodule_t mod) = 0;
+    virtual bool _checkModule(uint32_t mod) = 0;
 
-#ifndef GH_NO_FS
+#if GHC_FS != GHC_FS_NONE
     virtual void _fetchStartHook(String &path, File **file, const uint8_t **bytes, uint32_t *size, bool *pgm) = 0;
     virtual void _fetchEndHook(String &path) = 0;
 #endif
@@ -275,7 +273,7 @@ class HubHTTP {
         server.sendHeader(F("Content-Encoding"), F("gzip"));
     }
     void cache_h() {
-        server.sendHeader(F("Cache-Control"), F(GH_CACHE_PRD));
+        server.sendHeader(F("Cache-Control"), F(GHC_PORTAL_CACHE));
     }
 
 #if !defined(GH_NO_HTTP_FETCH) && !defined(GH_NO_FS)
@@ -288,7 +286,7 @@ class HubHTTP {
             server.send(403);
             return 1;
         }
-        GH_DEBUG_LOG("HTTP fetch");
+        GHI_DEBUG_LOG("HTTP fetch");
 
         File *file_p = nullptr;
         const uint8_t *bytes = nullptr;
@@ -311,7 +309,7 @@ class HubHTTP {
             return 1;
         }
 
-        File f = GH_FS.open(path.c_str(), "r");
+        File f = GHI_FS.open(path.c_str(), "r");
         if (f) {
             server.streamFile(f, gyverhub::getMimeByPath(path.c_str(), path.length()));
             return 1;
@@ -321,7 +319,7 @@ class HubHTTP {
     }
 #endif
 
-#ifndef GH_NO_FS
+#if GHC_FS != GHC_FS_NONE
     File file;
     bool updating = false;
 #endif
