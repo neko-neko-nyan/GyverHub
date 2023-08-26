@@ -70,11 +70,11 @@ namespace gyverhub {
             this->r = r;
         }
 
-        void setG(uint8_t r) {
+        void setG(uint8_t g) {
             this->g = g;
         }
 
-        void setB(uint8_t r) {
+        void setB(uint8_t b) {
             this->b = b;
         }
 
