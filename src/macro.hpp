@@ -45,6 +45,15 @@
 #define GHI_ESP_BUILD 0
 #endif
 
+#if defined(ESP32)
+#define GHI_PLATFORM_STR "ESP32"
+#elif defined(ESP8266)
+#define GHI_PLATFORM_STR "ESP8266"
+#elif defined(__AVR_ATmega328P__)
+#define GHI_PLATFORM_STR "ATmega328"
+#else
+#define GHI_PLATFORM_STR "Unknown"
+#endif
 
 #if GHC_LIB_DEBUG
 #define GHI_DEBUG_LOG(fmt, ...) do { Serial.printf("%s:%d in %s: " fmt "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ## __VA_ARGS__); } while(0)

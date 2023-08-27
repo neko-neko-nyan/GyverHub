@@ -17,6 +17,7 @@
 #include "utils2/timer.h"
 #include "utils2/json.h"
 #include "utils2/files.h"
+#include "hub/info.h"
 
 #if GHI_ESP_BUILD
 #include <FS.h>
@@ -168,30 +169,19 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 
     // подключить функцию-сборщик интерфейса
     void onBuild(gyverhub::BuildCallback handler) {
-        build_cb = *handler;
+        build_cb = handler;
     }
 
     // подключить функцию-обработчик запроса при ручном соединении
     void onManual(void (*handler)(const String& s, bool broadcast)) {
-        manual_cb = *handler;
+        manual_cb = handler;
     }
 
     // ========================= INFO =========================
 
     // подключить функцию-сборщик инфо
-    void onInfo(void (*handler)(GHinfo_t info)) {
-        info_cb = *handler;
-    }
-
-    // добавить поле в info
-    void addInfo(const String& label, const String& text) {
-        if (sptr) {
-            *sptr += '\"';
-            sptr->appendEscaped(label.c_str());
-            *sptr += F("\":\"");
-            sptr->appendEscaped(text.c_str());
-            *sptr += F("\",");
-        }
+    void onInfo(gyverhub::InfoCallback handler) {
+        info_cb = handler;
     }
 
     // ========================= CLI =========================
@@ -634,9 +624,8 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         switch (cmdn) {
             case GHcommand::DATA:
                 GHI_DEBUG_LOG("Event: GH_DATA from %d", from);
-                answ_f = 0;
                 if (data_cb) data_cb(name, value);
-                if (!answ_f) answerType();
+                answerType();
                 return;
 #if GHI_MOD_ENABLED(GH_MOD_SET)
             case GHcommand::SET: {
@@ -1069,70 +1058,10 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         answ.appendId(id);
         answ.itemString(F("type"), F("info"));
 
-        answ += F("\"info\":{\"version\":{");
-        answ.itemString(F("Library"), GHC_LIB_VERSION);
-        if (version) answ.itemString(F("Firmware"), version);
-
-        checkEndInfo(answ, GH_INFO_VERSION);
-        answ += (F(",\"net\":{"));
-#if GHI_ESP_BUILD
-        answ.itemString(F("Mode"), WiFi.getMode() == WIFI_AP ? F("AP") : (WiFi.getMode() == WIFI_STA ? F("STA") : F("AP_STA")));
-        answ.itemString(F("MAC"), WiFi.macAddress());
-        answ.itemString(F("SSID"), WiFi.SSID());
-        answ.itemString(F("RSSI"), String(constrain(2 * (WiFi.RSSI() + 100), 0, 100)) + '%');
-        answ.itemString(F("IP"), WiFi.localIP().toString());
-        answ.itemString(F("AP_IP"), WiFi.softAPIP().toString());
-#endif
-        checkEndInfo(answ, GH_INFO_NETWORK);
-        answ += (F(",\"memory\":{"));
-
-#if GHI_ESP_BUILD
-        answ.item(F("RAM"), String("[") + ESP.getFreeHeap() + ",0]");
-
-#if GHC_FS != GHC_FS_NONE
-#ifdef ESP8266
-        FSInfo fs_info;
-        GHI_FS.info(fs_info);
-        answ.item(F("Flash"), String("[") + fs_info.usedBytes + ',' + fs_info.totalBytes + "]");
-#else
-        answ.item(F("Flash"), String("[") + GHI_FS.usedBytes() + ',' + GHI_FS.totalBytes() + "]");
-#endif
-
-        answ.item(F("Sketch"), String("[") + ESP.getSketchSize() + ',' + ESP.getFreeSketchSpace() + "]");
-#endif
-#endif
-
-        checkEndInfo(answ, GH_INFO_MEMORY);
-        answ += (F(",\"system\":{"));
-        answ.itemInteger(F("Uptime"), millis() / 1000ul);
-#if GHI_ESP_BUILD
-#ifdef ESP8266
-        answ.itemString(F("Platform"), F("ESP8266"));
-#else
-        answ.itemString(F("Platform"), F("ESP32"));
-#endif
-        answ.itemInteger(F("CPU_MHz"), ESP.getCpuFreqMHz());
-        answ.itemString(F("Flash_chip"), String(ESP.getFlashChipSize() / 1000.0, 1) + " kB");
-#endif
-
-#ifdef __AVR_ATmega328P__
-        answ.itemString(F("Platform"), F("ATmega328"));
-#endif
-
-        checkEndInfo(answ, GH_INFO_SYSTEM);
-        answ += '}';
+        gyverhub::InfoBuilder::build(info_cb, answ, version);
 
         answ.end();
         _answer(answ);
-    }
-    void checkEndInfo(gyverhub::Json& answ, GHinfo_t info) {
-        if (info_cb) {
-            sptr = &answ;
-            info_cb(info);
-            sptr = nullptr;
-        }
-        if (answ[answ.length() - 1] == ',') answ[answ.length() - 1] = '}';
-        else answ += '}';
     }
 
     // ======================= UI ========================
@@ -1338,6 +1267,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 
     // ======================= SEND ========================
     void _send(const String& answ, bool broadcast = false) {
+        client_ptr = nullptr;
         if (manual_cb) manual_cb(answ, broadcast);
 
 #ifndef GH_NO_STREAM
@@ -1352,7 +1282,6 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 #endif
     }
     void _datasend(gyverhub::Json& answ, const String& data) {
-        answ_f = 1;
         answ.begin();
         answ.appendId(id);
         answ.itemString(F("type"), F("data"));
@@ -1381,14 +1310,12 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
     void (*data_cb)(const char* name, const char* value) = nullptr;
     gyverhub::BuildCallback build_cb = nullptr;
     bool (*req_cb)(const char* name, const char* value, GHclient nclient, GHcommand cmd) = nullptr;
-    void (*info_cb)(GHinfo_t info) = nullptr;
+    gyverhub::InfoCallback info_cb = nullptr;
     void (*cli_cb)(String& str) = nullptr;
     void (*manual_cb)(const String& s, bool broadcast) = nullptr;
     GHclient* client_ptr = nullptr;
-    gyverhub::Json *sptr = nullptr;
 
     bool running_f = 0;
-    bool answ_f = 0;
 
     uint16_t buf_size = 0;
 

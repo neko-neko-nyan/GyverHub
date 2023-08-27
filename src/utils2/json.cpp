@@ -12,6 +12,22 @@ void gyverhub::Json::appendEscaped(const void *str, bool fstr, char sym) {
     else appendEscaped((const char *) str, sym);
 }
 
+void gyverhub::Json::appendEscaped(const String &str, char sym) {
+    if (!str) return;
+
+    if (str.indexOf(sym) == -1) {
+        concat(str);
+        return;
+    }
+    
+    uint16_t len = str.length();
+    for (uint16_t i = 0; i < len; i++) {
+        char c = str[i];
+        if (c == sym) concat('\\');
+        concat(c);
+    }
+}
+
 void gyverhub::Json::appendEscaped(const char *str, char sym) {
     if (!str) return;
 
