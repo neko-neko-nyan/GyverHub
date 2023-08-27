@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 
-#include "stats.h"
+#include "utils/stats.h"
 
 struct GHclient {
     GHclient() {}

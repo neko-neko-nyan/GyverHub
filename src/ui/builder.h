@@ -7,7 +7,7 @@
 #include "ui/log.h"
 #include "ui/point.h"
 #include "utils2/json.h"
-#include "utils/client.h"
+#include "hub/client.h"
 #include "utils/flags.h"
 
 namespace gyverhub {

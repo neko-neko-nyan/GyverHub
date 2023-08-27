@@ -1,12 +1,11 @@
 #pragma once
 #include <Arduino.h>
 
-#include "../config.hpp"
-#include "../macro.hpp"
-#include "../utils/client.h"
-#include "../utils2/mime.h"
-#include "../utils2/files.h"
-#include "../utils/stats.h"
+#include "macro.hpp"
+#include "hub/client.h"
+#include "utils2/mime.h"
+#include "utils2/files.h"
+#include "utils/stats.h"
 
 
 #ifdef ESP8266

@@ -1,14 +1,6 @@
 #pragma once
 #include <stdint.h>
 
-// тип info
-enum GHinfo_t {
-    GH_INFO_VERSION,
-    GH_INFO_NETWORK,
-    GH_INFO_MEMORY,
-    GH_INFO_SYSTEM,
-};
-
 // причина перезагрузки
 enum GHreason_t {
     GH_REB_NONE,
@@ -60,58 +52,6 @@ enum class GHcommand : uint16_t {
     HTTP_OTA,
 
     UNKNOWN = 0xFFFF,
-};
-
-// системные события
-enum GHevent_t {
-    GH_FOCUS,
-    GH_PING,
-    GH_UNFOCUS,
-    GH_INFO,
-    GH_FSBR,
-    GH_FORMAT,
-    GH_REBOOT,
-    GH_FETCH_CHUNK,
-    GH_FETCH_ABORTED,
-    
-    GH_DATA,
-    GH_SET,
-    GH_CLI,
-    GH_DELETE,
-    GH_RENAME,
-    GH_FETCH,
-    GH_UPLOAD,
-    GH_UPLOAD_CHUNK,
-    GH_OTA,
-    GH_OTA_CHUNK,
-    GH_OTA_URL,
-
-    GH_IDLE,
-    GH_START,
-    GH_STOP,
-
-    GH_CONNECTING,
-    GH_CONNECTED,
-    GH_DISCONNECTED,
-    GH_ERROR,
-
-    GH_UNKNOWN,
-    GH_DISCOVER_ALL,
-    GH_DISCOVER,
-
-    GH_READ_HOOK,
-    GH_SET_HOOK,
-
-    GH_FETCH_ERROR,
-    GH_FETCH_FINISH,
-
-    GH_UPLOAD_ERROR,
-    GH_UPLOAD_ABORTED,
-    GH_UPLOAD_FINISH,
-
-    GH_OTA_ERROR,
-    GH_OTA_ABORTED,
-    GH_OTA_FINISH,
 };
 
 GHcommand GH_getCmd(const char* str);
