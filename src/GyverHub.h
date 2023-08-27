@@ -21,6 +21,7 @@
 
 #if GHI_ESP_BUILD
 #include <FS.h>
+#include "hub/fetch.h"
 #endif
 
 #ifdef ESP8266
@@ -38,6 +39,11 @@
 #if GHI_MOD_ENABLED(GH_MOD_OTA_URL)
 #include <HTTPUpdate.h>
 #endif
+#endif
+
+#if !GHI_ESP_BUILD
+#define SIGRD 5
+#include <avr/boot.h>
 #endif
 
 #if GHC_FS == GHC_FS_LITTLEFS
@@ -80,147 +86,116 @@ class HubWS {};
 
 // ========================== CLASS ==========================
 class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS {
-   public:
-    // ========================== CONSTRUCT ==========================
-
-    // настроить префикс, название и иконку. Опционально задать свой ID устройства (для esp он генерируется автоматически)
+public:
+    /**
+     * @param prefix Префикс
+     * @param name Название устройства
+     * @param icon Иконка устройства
+     * @param id ID устройства. По умолчаню на ESP32/ESP8266 генерируется из MAC адреса WiFi интерфейса, на AVR (arduino) - из сигнатуры МК.
+     */
     GyverHub(const char* prefix = "", const char* name = "", const char* icon = "", uint32_t id = 0) {
         config(prefix, name, icon, id);
     }
 
-    // настроить префикс, название и иконку. Опционально задать свой ID устройства (для esp он генерируется автоматически)
-    void config(const char* nprefix, const char* nname, const char* nicon, uint32_t nid = 0) {
-        prefix = nprefix;
-        name = nname;
-        icon = nicon;
+    /**
+     * Перенастроить устройство
+     * @param prefix Префикс
+     * @param name Название устройства
+     * @param icon Иконка устройства
+     * @param id ID устройства. По умолчаню на ESP32/ESP8266 генерируется из MAC адреса WiFi интерфейса, на AVR (arduino) - из сигнатуры МК.
+     */
+    void config(const char* prefix, const char* name, const char* icon = "", uint32_t id = 0) {
+        this->prefix = prefix;
+        this->name = name;
+        this->icon = icon;
+        if (!id) {
 #if GHI_ESP_BUILD
-        if (nid) ultoa((nid <= 0xfffff) ? (nid + 0xfffff) : nid, id, HEX);
-        else {
             uint8_t mac[6];
             WiFi.macAddress(mac);
-            ultoa(*((uint32_t*)(mac + 2)), id, HEX);
+            id = *((uint32_t*)(mac + 2));
+#else
+            id |= boot_signature_byte_get(0);
+            id <<= 8;
+            id |= boot_signature_byte_get(1);
+            id <<= 8;
+            id |= boot_signature_byte_get(2);
+            id <<= 8;
+            id |= boot_signature_byte_get(3);
+#endif
         }
-#else
-        ultoa((nid <= 0x100000) ? (nid + 0x100000) : nid, id, HEX);
-#endif
+        ultoa(id, this->id, HEX);
     }
 
-    // ========================== SETUP ==========================
-
-    // запустить
-    void begin() {
-        GHI_DEBUG_LOG("called");
-#if GH_HTTP_IMPL != GH_IMPL_NONE
-        beginWS();
-        beginHTTP();
-#endif
-#if GH_MQTT_IMPL != GH_IMPL_NONE
-        beginMQTT();
-#endif
-
-#if GHC_FS != GHC_FS_NONE
-#ifdef ESP8266
-        fs_mounted = GHI_FS.begin();
-#else
-        fs_mounted = GHI_FS.begin(true);
-#endif
-#endif
-        running_f = true;
+    /// установить версию прошивки для отображения в Info и OTA
+    void setVersion(const char* version) {
+        this->version = version;
     }
 
-    // остановить
-    void end() {
-        GHI_DEBUG_LOG("called");
-#if GH_HTTP_IMPL != GH_IMPL_NONE
-        endWS();
-        endHTTP();
-#endif
-#if GH_MQTT_IMPL != GH_IMPL_NONE
-        endMQTT();
-#endif
-        running_f = false;
+    /// установить пин-код для открытия устройства (значение больше 1000, не может начинаться с 000..)
+    void setPIN(uint16_t pin) {
+        if (pin > 9999) return;
+        uint32_t hash = 0;
+
+        char pin_s[11];
+        ultoa(pin, pin_s, 10);
+
+        uint16_t len = strlen(pin_s);
+        for (uint16_t i = 0; i < len; i++) {
+            hash = ((hash << 5u) - hash) + pin_s[i];
+        }
+
+        this->pinHash = hash;
+        
+        // uint16_t pin2 = 0;
+        // for (int i = 0; i < 4; i++) {
+        //     pin2 *= 10;
+        //     pin2 += pin % 10;
+        //     pin /= 10;
+        // }
+
+        // do {
+        //     hash = (hash << 5u) - hash + '0' + (pin2 % 10);
+        //     pin2 /= 10;
+        // } while (pin2 != 0);
     }
 
-    // установить версию прошивки для отображения в Info и OTA
-    void setVersion(const char* v) {
-        version = v;
+    /// установить пин-код для открытия устройства (значение больше 1000, не может начинаться с 000..)
+    void removePin(uint32_t pin) {
+        this->pinHash = 0;
     }
 
-    // установить размер буфера строки для сборки интерфейса при ручной отправке
-    // 0 - интерфейс будет собран и отправлен цельной строкой
-    // >0 - пакет будет отправляться частями
+    /**
+     * Установить размер буфера строки для сборки интерфейса при ручной отправке.
+     * 0 - интерфейс будет собран и отправлен цельной строкой
+     * >0 - пакет будет отправляться частями
+     */ 
     void setBufferSize(uint16_t size) {
         buf_size = size;
     }
 
-    // ========================== PIN ==========================
-
-    // установить пин-код для открытия устройства (значение больше 1000, не может начинаться с 000..)
-    void setPIN(uint32_t npin) {
-        PIN = npin;
+    /// автоматически рассылать обновления клиентам при действиях на странице (умолч. true)
+    void sendUpdateAuto(bool f) {
+        autoUpd_f = f;
     }
 
-    // прочитать пин-код
-    uint32_t getPIN() {
-        return PIN;
+#if GH_MQTT_IMPL != GH_IMPL_NONE
+
+    /// автоматически отправлять новое состояние на get-топик при изменении через set (умолч. false)
+    void sendGetAuto(bool v) {
+        autoGet_f = v;
     }
 
-    // ========================= ATTACH =========================
+#endif
 
-    // подключить функцию-сборщик интерфейса
-    void onBuild(gyverhub::BuildCallback handler) {
-        build_cb = handler;
-    }
 
-    // подключить функцию-обработчик запроса при ручном соединении
-    void onManual(void (*handler)(const String& s, bool broadcast)) {
-        manual_cb = handler;
-    }
+    // ========================= Checks =========================
 
-    // ========================= INFO =========================
-
-    // подключить функцию-сборщик инфо
-    void onInfo(gyverhub::InfoCallback handler) {
-        info_cb = handler;
-    }
-
-    // ========================= CLI =========================
-
-    // подключить обработчик входящих сообщений с веб-консоли
-    void onCLI(void (*handler)(String& s)) {
-        cli_cb = *handler;
-    }
-
-    // отправить текст в веб-консоль. Опционально цвет
-    void print(const String& str, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
-        if (!focused()) return;
-        gyverhub::Json answ;
-        answ.begin();
-        answ.appendId(id);
-        answ.itemString(F("type"), F("print"));
-        answ.itemString(F("text"), str);
-        answ.itemInteger(F("color"), color.toHex());
-        answ.end();
-        _send(answ);
-    }
-
-    // ========================== STATUS ==========================
-
-    // вернёт true, если система запущена
+    /// вернёт true, если система запущена
     bool running() {
         return running_f;
     }
 
-    // подключить функцию-обработчик перезагрузки. Будет вызвана перед перезагрузкой
-    void onReboot(void (*handler)(GHreason_t)) {
-#if GHI_ESP_BUILD
-        reboot_cb = handler;
-#else
-        (void) handler;
-#endif
-    }
-
-    // true - интерфейс устройства сейчас открыт на сайте или в приложении
+    /// true - интерфейс устройства сейчас открыт на сайте или в приложении
     bool focused() {
         if (!running_f) return 0;
         for (uint8_t i = 0; i < GH_CONN_AMOUNT; i++) {
@@ -229,69 +204,94 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         return 0;
     }
 
-    // проверить фокус по указанному типу связи
+    /// проверить фокус по указанному типу связи
     bool focused(GHconn_t from) {
         return focus_arr[from];
     }
 
-    // подключить обработчик запроса клиента
+
+    // ========================= Handlers =========================
+
+    /// подключить функцию-сборщик интерфейса
+    void onBuild(gyverhub::BuildCallback handler) {
+        build_cb = handler;
+    }
+
+    /// подключить функцию-обработчик запроса при ручном соединении
+    void onManual(void (*handler)(const String& s, bool broadcast)) {
+        manual_cb = handler;
+    }
+
+    /// подключить функцию-сборщик инфо
+    void onInfo(gyverhub::InfoCallback handler) {
+        info_cb = handler;
+    }
+
+    /// подключить обработчик входящих сообщений с веб-консоли
+    void onCLI(void (*handler)(String& s)) {
+        cli_cb = *handler;
+    }
+
+#if GHI_ESP_BUILD
+
+    /// подключить функцию-обработчик перезагрузки. Будет вызвана перед перезагрузкой
+    void onReboot(void (*handler)(GHreason_t)) {
+        reboot_cb = handler;
+    }
+
+#endif
+
+    /// подключить обработчик запроса клиента
     void onRequest(bool (*handler)(const char* name, const char* value, GHclient nclient, GHcommand cmd)) {
         req_cb = handler;
     }
 
-#if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_FETCH)
-    // ========================= FETCH ==========================
-
-    // подключить обработчик скачивания
-    void onFetch(void (*handler)(String& path, bool start)) {
-        fetch_cb = *handler;
-    }
-
-    // отправить файл (вызывать в обработчике onFetch)
-    void fetchFile(const char* path) {
-        file_d = GHI_FS.open(path, "r");
-    }
-
-    template<typename T>
-    void fetchFile(T f) {
-        file_d = f;
-    }
-
-    // отправить сырые данные (вызывать в обработчике onFetch)
-    void fetchBytes(uint8_t* bytes, uint32_t size) {
-        file_b = bytes;
-        file_b_size = size;
-        file_b_pgm = 0;
-    }
-    // отправить сырые данные из PGM (вызывать в обработчике onFetch)
-    void fetchBytes_P(const uint8_t* bytes, uint32_t size) {
-        file_b = bytes;
-        file_b_size = size;
-        file_b_pgm = 1;
-    }
-#endif
-
-    // ========================= DATA ==========================
-    // подключить обработчик данных (см. GyverHub.js API)
+    /// подключить обработчик данных (см. GyverHub.js API)
     void onData(void (*handler)(const char* name, const char* value)) {
         data_cb = handler;
     }
 
-    // ответить клиенту. Вызывать в обработчике onData (см. GyverHub.js API)
-    void answer(const String& data) {
-        gyverhub::Json answ;
-        _datasend(answ, data);
-        _answer(answ);
+#if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_FETCH)
+
+    /// подключить обработчик скачивания
+    void onFetch(gyverhub::FetchCallback handler) {
+        fetch.setCallback(handler);
     }
 
-    // отправить сырые данные вручную (см. GyverHub.js API)
-    void send(const String& data) {
-        gyverhub::Json answ;
-        _datasend(answ, data);
-        _send(answ);
+#endif
+
+
+#if GH_MQTT_IMPL != GH_IMPL_NONE
+
+    // ========================== ON/OFF ==========================
+
+    // отправить MQTT LWT команду на включение
+    void turnOn() {
+        _power(F("online"));
     }
 
-    // ========================= NOTIF ==========================
+    // отправить MQTT LWT команду на выключение
+    void turnOff() {
+        _power(F("offline"));
+    }
+
+private:
+    void _power(FSTR mode) {
+        if (!running_f) return;
+
+        String topic(prefix);
+        topic += F("/hub/");
+        topic += id;
+        topic += F("/status");
+        sendMQTT(topic, mode);
+    }
+public:
+
+#endif
+
+
+    // ========================= DATA ==========================
+
     // отправить пуш уведомление
     void sendPush(const String& text) {
         if (!running_f) return;
@@ -329,58 +329,43 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         _send(answ);
     }
 
-    // ========================= UPDATE ==========================
-
-    // отправить update вручную с указанием значения
-    void sendUpdate(const String& name, const String& value) {
-        _sendUpdate(name.c_str(), value.c_str());
-    }
-
-    // отправить update по имени компонента (значение будет прочитано в build). Нельзя вызывать из build. Имена можно передать списком через запятую
-    void sendUpdate(const String& name) {
-        if (!running_f || !build_cb || !focused()) return;
-
+    // отправить текст в веб-консоль. Опционально цвет
+    void print(const String& str, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
+        if (!focused()) return;
         gyverhub::Json answ;
-        _updateBegin(answ);
-
-        char* str = (char*)name.c_str();
-        char* p = str;
-        GH_splitter(NULL);
-        while ((p = GH_splitter(str)) != NULL) {
-            answ.key(p);
-            answ += '\"';
-            answ.reserve(answ.length() + 64);
-            gyverhub::Builder::buildRead(build_cb, &answ, p);
-            answ += F("\",");
-        }
-        answ[answ.length() - 1] = '}';
-        answ.end();
-        _send(answ);
-    }
-
-    // автоматически рассылать обновления клиентам при действиях на странице (умолч. true)
-    void sendUpdateAuto(bool f) {
-        autoUpd_f = f;
-    }
-
-    void _updateBegin(gyverhub::Json& answ) {
         answ.begin();
         answ.appendId(id);
-        answ.itemString(F("type"), F("update"));
-        answ.key(F("updates"));
-        answ += '{';
-    }
-    void _sendUpdate(const char* name, const char* value) {
-        if (!running_f || !focused()) return;
-        gyverhub::Json answ;
-        _updateBegin(answ);
-        answ.itemString(name, value);
-        answ += '}';
+        answ.itemString(F("type"), F("print"));
+        answ.itemString(F("text"), str);
+        answ.itemInteger(F("color"), color.toHex());
         answ.end();
         _send(answ);
     }
 
-    // ======================= SEND CANVAS ========================
+    // ответить клиенту. Вызывать в обработчике onData (см. GyverHub.js API)
+    void answer(const String& data) {
+        gyverhub::Json answ;
+        _datasend(answ, data);
+        _answer(answ);
+    }
+
+    // отправить сырые данные вручную (см. GyverHub.js API)
+    void send(const String& data) {
+        gyverhub::Json answ;
+        _datasend(answ, data);
+        _send(answ);
+    }
+
+private:
+    void _datasend(gyverhub::Json& answ, const String& data) {
+        answ.begin();
+        answ.appendId(id);
+        answ.itemString(F("type"), F("data"));
+        answ.itemString(F("data"), data);
+        answ.end();
+    }
+public:
+
     // отправить холст
     void sendCanvas(const String& name, gyverhub::Canvas& cv) {
         if (!running_f) return;
@@ -412,33 +397,71 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         cv.clearBuffer();
     }
 
+    // отправить update вручную с указанием значения
+    void sendUpdate(const String& name, const String& value) {
+        sendUpdate(name.c_str(), value.c_str());
+    }
+
+    // отправить update вручную с указанием значения
+    void sendUpdate(const char* name, const char* value) {
+        if (!running_f || !focused()) return;
+        gyverhub::Json answ;
+        _updateBegin(answ);
+        answ.itemString(name, value);
+        answ += '}';
+        answ.end();
+        _send(answ);
+    }
+
+    // отправить update по имени компонента (значение будет прочитано в build). Нельзя вызывать из build. Имена можно передать списком через запятую
+    void sendUpdate(const String& name) {
+        if (!running_f || !build_cb || !focused()) return;
+
+        gyverhub::Json answ;
+        _updateBegin(answ);
+
+        char* str = (char*)name.c_str();
+        char* p = str;
+        GH_splitter(NULL);
+        while ((p = GH_splitter(str)) != NULL) {
+            answ.key(p);
+            answ += '\"';
+            answ.reserve(answ.length() + 64);
+            gyverhub::Builder::buildRead(build_cb, &answ, p);
+            answ += F("\",");
+        }
+        answ[answ.length() - 1] = '}';
+        answ.end();
+        _send(answ);
+    }
+
+private:
+    void _updateBegin(gyverhub::Json& answ) {
+        answ.begin();
+        answ.appendId(id);
+        answ.itemString(F("type"), F("update"));
+        answ.key(F("updates"));
+        answ += '{';
+    }
+public:
+
     // ======================== SEND GET =========================
 
-    // автоматически отправлять новое состояние на get-топик при изменении через set (умолч. false)
-    void sendGetAuto(bool v) {
-#if GHI_ESP_BUILD
-        autoGet_f = v;
-#else
-        (void) v;
-#endif
-    }
+#if GH_MQTT_IMPL != GH_IMPL_NONE
 
     // отправить имя-значение на get-топик (MQTT)
     void sendGet(GHI_UNUSED const String& name, GHI_UNUSED const String& value) {
         if (!running_f) return;
-#if GH_MQTT_IMPL != GH_IMPL_NONE
         String topic(prefix);
         topic += F("/hub/");
         topic += id;
         topic += F("/get/");
         topic += name;
         sendMQTT(topic, value);
-#endif
     }
 
     // отправить значение по имени компонента на get-топик (MQTT) (значение будет прочитано в build). Имена можно передать списком через запятую
     void sendGet(GHI_UNUSED const String& name) {
-#if GH_MQTT_IMPL != GH_IMPL_NONE
         if (!running_f || !build_cb) return;
 
         char* str = (char*)name.c_str();
@@ -448,20 +471,9 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
             gyverhub::Json value;
             if (gyverhub::Builder::buildRead(build_cb, &value, p)) sendGet(p, value);
         }
+    }
+
 #endif
-    }
-
-    // ========================== ON/OFF ==========================
-
-    // отправить MQTT LWT команду на включение
-    void turnOn() {
-        _power(F("online"));
-    }
-
-    // отправить MQTT LWT команду на выключение
-    void turnOff() {
-        _power(F("offline"));
-    }
 
     // ========================== PARSER ==========================
 
@@ -558,7 +570,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
                 GHI_DEBUG_LOG("Event: GH_SET_HOOK from %d", from);
                 gyverhub::Builder::buildSet(build_cb, name, value, client);
                 if (autoGet_f) sendGet(name, value);
-                if (autoUpd_f) _sendUpdate(name, value);
+                if (autoUpd_f) sendUpdate(name, value);
                 return;
             }
 #endif
@@ -636,10 +648,10 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
                 }
                 
                 bool mustRefresh = gyverhub::Builder::buildSet(build_cb, name, value, client);
-#if GHI_ESP_BUILD
+#if GH_MQTT_IMPL != GH_IMPL_NONE
                 if (autoGet_f) sendGet(name, value);
 #endif
-                if (autoUpd_f) _sendUpdate(name, value);
+                if (autoUpd_f) sendUpdate(name, value);
                 if (mustRefresh) answerUI();
                 else if (!autoUpd_f) answerType();
                 return;
@@ -671,16 +683,13 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 #endif
 #if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_FETCH)
             case GHcommand::FETCH: {
-                if (file_d || file_b) {
+                if (fetch.isActive()) {
                     GHI_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (busy)", from);
                     answerType(F("fetch_err"));
                     return;
                 }
 
-                fetch_path = name;
-                if (fetch_cb) fetch_cb(fetch_path, true);
-                if (!file_d && !file_b) file_d = GHI_FS.open(name, "r");
-                if (!file_d && !file_b) {
+                if (!fetch.open(name)) {
                     GHI_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (not found)", from);
                     answerType(F("fetch_err"));
                     return;
@@ -689,16 +698,12 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
                 GHI_DEBUG_LOG("Event: GH_FETCH from %d", from);
                 fs_client = client;
                 fs_tmr.reset();
-                uint32_t size = file_b ? file_b_size : file_d.size();
-                file_b_idx = 0;
-                dwn_chunk_count = 0;
-                dwn_chunk_amount = (size + GHC_FETCH_CHUNK_SIZE - 1) / GHC_FETCH_CHUNK_SIZE;  // round up
                 answerType(F("fetch_start"));
                 return;
             }
 
             case GHcommand::FETCH_CHUNK:
-                if ((!file_d && !file_b) || fs_client != client) {
+                if (!fetch.isActive() || fs_client != client) {
                     GHI_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (closed or wrong clid)", from);
                     answerType(F("fetch_err"));
                     return;
@@ -707,29 +712,19 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
                 GHI_DEBUG_LOG("Event: GH_FETCH_CHUNK from %d", from);
                 fs_tmr.reset();
                 answerChunk();
-                dwn_chunk_count++;
-                if (dwn_chunk_count < dwn_chunk_amount)
-                    return;
-                
                 GHI_DEBUG_LOG("Event: GH_FETCH_FINISH from %d", from);
-                if (fetch_cb) fetch_cb(fetch_path, false);
-                if (file_d) file_d.close();
-                file_b = nullptr;
-                fetch_path.clear();
+                fetch.close();
                 return;
 
             case GHcommand::FETCH_STOP:
-                if ((!file_d && !file_b) || fs_client != client) {
+                if (!fetch.isActive() || fs_client != client) {
                     GHI_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (closed or wrong clid)", from);
                     answerType(F("fetch_err"));
                     return;
                 }
 
                 GHI_DEBUG_LOG("Event: GH_FETCH_ABORTED from %d", from);
-                if (fetch_cb) fetch_cb(fetch_path, false);
-                if (file_d) file_d.close();
-                file_b = nullptr;
-                fetch_path.clear();
+                fetch.close();
                 return;
 #endif
 #if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_UPLOAD)
@@ -932,6 +927,43 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         }
     }
 
+
+    // ========================== SETUP ==========================
+
+    // запустить
+    void begin() {
+        GHI_DEBUG_LOG("called");
+#if GH_HTTP_IMPL != GH_IMPL_NONE
+        beginWS();
+        beginHTTP();
+#endif
+#if GH_MQTT_IMPL != GH_IMPL_NONE
+        beginMQTT();
+#endif
+
+#if GHC_FS != GHC_FS_NONE
+#ifdef ESP8266
+        fs_mounted = GHI_FS.begin();
+#else
+        fs_mounted = GHI_FS.begin(true);
+#endif
+#endif
+        running_f = true;
+    }
+
+    // остановить
+    void end() {
+        GHI_DEBUG_LOG("called");
+#if GH_HTTP_IMPL != GH_IMPL_NONE
+        endWS();
+        endHTTP();
+#endif
+#if GH_MQTT_IMPL != GH_IMPL_NONE
+        endMQTT();
+#endif
+        running_f = false;
+    }
+
     // ========================== TICK ==========================
 
     // тикер, вызывать в loop
@@ -974,12 +1006,9 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         }
 #endif
 #if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_FETCH)
-        if ((file_d || file_b) && fs_tmr.isTimedOut(GHC_CONN_TOUT * 1000ul)) {
+        if (fetch.isActive() && fs_tmr.isTimedOut(GHC_CONN_TOUT * 1000ul)) {
             GHI_DEBUG_LOG("Event: GH_FETCH_ABORTED from %d", fs_client.from);
-            if (fetch_cb) fetch_cb(fetch_path, false);
-            if (file_d) file_d.close();
-            file_b = nullptr;
-            fetch_path = "";
+            fetch.close();
         }
 #endif
 #if GHI_ESP_BUILD
@@ -1008,20 +1037,6 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         return id;
     }
 
-    void _power(FSTR mode) {
-        if (!running_f) return;
-
-#if GH_MQTT_IMPL != GH_IMPL_NONE
-        String topic(prefix);
-        topic += F("/hub/");
-        topic += id;
-        topic += F("/status");
-        sendMQTT(topic, mode);
-#else
-        (void) mode;
-#endif
-    }
-
     bool _reqHook(const char* name, const char* value, GHclient client, GHcommand event) {
         if (req_cb && !req_cb(name, value, client, event)) return 0;  // forbidden
         return 1;
@@ -1032,21 +1047,11 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 
 #if GHC_FS != GHC_FS_NONE
     void _fetchStartHook(String& path, File** file, const uint8_t** bytes, uint32_t* size, bool* pgm) {
-        if (!fetch_cb || file_d || file_b) return;  // busy
-
-        fetch_cb(path, true);
-        *file = &file_d;
-        *bytes = file_b;
-        *size = file_b_size;
-        *pgm = file_b_pgm;
+        if (!fetch.isActive() && fetch.open(path.c_str()))
+            fetch.getData(file, bytes, size, pgm);
     }
     void _fetchEndHook(String& path) {
-        if (!fetch_cb) return;
-
-        fetch_cb(path, false);
-        file_b = nullptr;
-        file_b_size = 0;
-        if (file_d) file_d.close();
+        fetch.close();
     }
 #endif
 
@@ -1163,16 +1168,6 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 
     // ======================= DISCOVER ========================
     void answerDiscover() {
-        uint32_t hash = 0;
-        if (PIN > 999) {
-            char pin_s[11];
-            ultoa(PIN, pin_s, 10);
-            uint16_t len = strlen(pin_s);
-            for (uint16_t i = 0; i < len; i++) {
-                hash = (((uint32_t)hash << 5) - hash) + pin_s[i];
-            }
-        }
-
         gyverhub::Json answ;
         answ.reserve(120);
         answ.begin();
@@ -1180,7 +1175,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         answ.itemString(F("type"), F("discover"));
         answ.itemString(F("name"), name);
         answ.itemString(F("icon"), icon);
-        answ.itemInteger(F("PIN"), hash);
+        answ.itemInteger(F("PIN"), pinHash);
         answ.itemString(F("version"), version);
         answ.itemInteger(F("max_upl"), GHC_UPLOAD_CHUNK_SIZE);
 #ifdef ATOMIC_FS_UPDATE
@@ -1200,32 +1195,7 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         answ.reserve(GHC_FETCH_CHUNK_SIZE + 100);
         answ.begin();
         answ.appendId(id);
-        answ.itemString(F("type"), F("fetch_next_chunk"));
-        answ.itemInteger(F("chunk"), dwn_chunk_count);
-        answ.itemInteger(F("amount"), dwn_chunk_amount);
-        answ += F("\"data\":\"");
-        if (file_b) {
-            size_t len = min((size_t) file_b_size, (size_t) GHC_FETCH_CHUNK_SIZE);
-            size_t out_len;
-            char *b64 = gyverhub::base64Encode(file_b + file_b_idx, len, file_b_pgm, out_len);
-            answ.concat(b64, out_len);
-            free(b64);
-        } else {
-            size_t len = min((size_t) file_d.available(), (size_t) GHC_FETCH_CHUNK_SIZE);
-            uint8_t *data = (uint8_t *)malloc(len);
-            len = file_d.read(data, len);
-
-            if (len) {
-                size_t out_len;
-                char *b64 = gyverhub::base64Encode(data, len, false, out_len);
-                free(data);
-                answ.concat(b64, out_len);
-                free(b64);
-            } else {
-                free(data);
-            }
-        }
-        answ += '\"';
+        fetch.nextChunk(answ);
         answ.end();
         _answer(answ);
 #endif
@@ -1281,13 +1251,6 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
         if (focus_arr[GH_MQTT] || broadcast) sendMQTT(answ);
 #endif
     }
-    void _datasend(gyverhub::Json& answ, const String& data) {
-        answ.begin();
-        answ.appendId(id);
-        answ.itemString(F("type"), F("data"));
-        answ.itemString(F("data"), data);
-        answ.end();
-    }
 
     // ========================== MISC ==========================
     void setFocus(GHconn_t from) {
@@ -1303,10 +1266,9 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
     const char* name = nullptr;
     const char* icon = nullptr;
     const char* version = nullptr;
-    uint32_t PIN = 0;
+    uint32_t pinHash = 0;
     char id[9];
 
-    void (*fetch_cb)(String& path, bool start) = nullptr;
     void (*data_cb)(const char* name, const char* value) = nullptr;
     gyverhub::BuildCallback build_cb = nullptr;
     bool (*req_cb)(const char* name, const char* value, GHclient nclient, GHcommand cmd) = nullptr;
@@ -1325,7 +1287,9 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
 
 #if GHI_ESP_BUILD
     void (*reboot_cb)(GHreason_t r) = nullptr;
+#if GH_MQTT_IMPL != GH_IMPL_NONE
     bool autoGet_f = 0;
+#endif
     GHreason_t reboot_f = GH_REB_NONE;
 
 #if GHI_MOD_ENABLED(GH_MOD_OTA_URL)
@@ -1346,12 +1310,6 @@ class GyverHub : public HubStream, public HubHTTP, public HubMQTT, public HubWS 
     // fetch
     GHclient fs_client;
     gyverhub::Timer fs_tmr {};
-    String fetch_path;
-    const uint8_t* file_b = nullptr;
-    uint32_t file_b_size, file_b_idx;
-    bool file_b_pgm = 0;
-    File file_d;
-    uint16_t dwn_chunk_count = 0;
-    uint16_t dwn_chunk_amount = 0;
+    gyverhub::FetchBuilder fetch {};
 #endif
 };

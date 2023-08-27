@@ -297,7 +297,7 @@ class HubHTTP {
             server.setContentLength(size);
             server.send(200, gyverhub::getMimeByPath(path.c_str(), path.length()), "");
             if (pgm) server.sendContent_P((PGM_P)bytes, size);
-            else server.sendContent((PGM_P)bytes, size);
+            else server.sendContent((const char *) bytes, size);
             _fetchEndHook(path);
             return 1;
         }
