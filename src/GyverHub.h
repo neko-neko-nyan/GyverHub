@@ -8,7 +8,6 @@
 #include "macro.hpp"
 #include "stream.h"
 #include "ui/color.h"
-#include "utils/datatypes.h"
 #include "utils/flags.h"
 #include "ui/log.h"
 #include "utils/misc.h"
@@ -305,7 +304,7 @@ public:
     }
 
     // отправить всплывающее уведомление
-    void sendNotice(const String& text, gyverhub::Color color = gyverhub::Colors::GH_GREEN) {
+    void sendNotice(const String& text, gyverhub::Color color = gyverhub::Colors::GREEN) {
         if (!running_f || !focused()) return;
         gyverhub::Json answ;
         answ.begin();
@@ -330,7 +329,7 @@ public:
     }
 
     // отправить текст в веб-консоль. Опционально цвет
-    void print(const String& str, gyverhub::Color color = gyverhub::Colors::GH_DEFAULT) {
+    void print(const String& str, gyverhub::Color color = gyverhub::Colors::UNSET) {
         if (!focused()) return;
         gyverhub::Json answ;
         answ.begin();

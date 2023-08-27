@@ -3,16 +3,16 @@
 
 namespace gyverhub {
     enum class Colors : uint32_t {
-        GH_RED = 0xcb2839,
-        GH_ORANGE = 0xd55f30,
-        GH_YELLOW = 0xd69d27,
-        GH_GREEN = 0x37A93C,
-        GH_MINT = 0x25b18f,
-        GH_AQUA = 0x2ba1cd,
-        GH_BLUE = 0x297bcd,
-        GH_VIOLET = 0x825ae7,
-        GH_PINK = 0xc8589a,
-        GH_DEFAULT = 0xffffffff,
+        RED = 0xcb2839,
+        ORANGE = 0xd55f30,
+        YELLOW = 0xd69d27,
+        GREEN = 0x37A93C,
+        MINT = 0x25b18f,
+        AQUA = 0x2ba1cd,
+        BLUE = 0x297bcd,
+        VIOLET = 0x825ae7,
+        PINK = 0xc8589a,
+        UNSET = 0xffffffff,
     };
 
     class Color {

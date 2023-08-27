@@ -1,7 +1,6 @@
 #include "builder.h"
-#include "utils/datatypes.h"
 
-void gyverhub::Builder::parse(void *var, GHdata_t dtype) {
+void gyverhub::Builder::parse(void *var, DataType dtype) {
     const char *str = value;
     if (!var) return;
     switch (dtype) {
@@ -57,6 +56,74 @@ void gyverhub::Builder::parse(void *var, GHdata_t dtype) {
         } break;
 
         case GH_NULL:
+            break;
+    }
+}
+
+void gyverhub::Builder::appendObject(void* var, DataType type) {
+    if (!var) {
+        *sptr += '0';
+        return;
+    }
+    switch (type) {
+        case GH_STR:
+            sptr->appendEscaped(((String*)var)->c_str());
+            break;
+
+        case GH_CSTR:
+            sptr->appendEscaped((char*) var);
+            break;
+
+        case GH_BOOL:
+            *sptr += *(bool*)var;
+            break;
+
+        case GH_INT8:
+            *sptr += *(int8_t*)var;
+            break;
+
+        case GH_UINT8:
+            *sptr += *(uint8_t*)var;
+            break;
+
+        case GH_INT16:
+            *sptr += *(int16_t*)var;
+            break;
+        case GH_UINT16:
+            *sptr += *(uint16_t*)var;
+            break;
+
+        case GH_INT32:
+            *sptr += *(int32_t*)var;
+            break;
+        case GH_UINT32:
+            *sptr += *(uint32_t*)var;
+            break;
+
+        case GH_FLOAT:
+            if (isnan(*(float*)var)) *sptr += 0;
+            else *sptr += *(float*)var;
+            break;
+        case GH_DOUBLE:
+            if (isnan(*(double*)var)) *sptr += 0;
+            else *sptr += *(double*)var;
+            break;
+
+        case GH_COLOR:
+            *sptr += ((gyverhub::Color*)var)->toHex();
+            break;
+        case GH_FLAGS:
+#if GH_ESP_BUILD
+            *sptr += ((GHflags<64>*)var)->to_ullong();
+#else
+            *sptr += (unsigned long)((GHflags<64>*)var)->to_ullong();
+#endif
+            break;
+        case GH_POS:
+            break;
+
+        case GH_NULL:
+            *sptr += '0';
             break;
     }
 }
