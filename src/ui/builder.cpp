@@ -48,7 +48,7 @@ void gyverhub::Builder::parse(void *var, DataType dtype) {
             *(gyverhub::Color*)var = gyverhub::Color::fromHex(atol(str));
             break;
         case GH_FLAGS:
-            *((GHflags<64>*)var) = GHflags<64>(atoi(str));
+            *((gyverhub::Flags*)var) = gyverhub::Flags(str);
             break;
         case GH_POS: {
             uint32_t xy = atol(str);
@@ -113,11 +113,7 @@ void gyverhub::Builder::appendObject(void* var, DataType type) {
             *sptr += ((gyverhub::Color*)var)->toHex();
             break;
         case GH_FLAGS:
-#if GH_ESP_BUILD
-            *sptr += ((GHflags<64>*)var)->to_ullong();
-#else
-            *sptr += (unsigned long)((GHflags<64>*)var)->to_ullong();
-#endif
+            *sptr += ((gyverhub::Flags*)var)->toString();
             break;
         case GH_POS:
             break;

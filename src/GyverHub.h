@@ -8,7 +8,7 @@
 #include "macro.hpp"
 #include "stream.h"
 #include "ui/color.h"
-#include "utils/flags.h"
+#include "ui/flags.h"
 #include "ui/log.h"
 #include "utils/misc.h"
 #include "utils/stats.h"

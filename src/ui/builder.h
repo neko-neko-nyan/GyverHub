@@ -8,7 +8,7 @@
 #include "ui/point.h"
 #include "utils2/json.h"
 #include "hub/client.h"
-#include "utils/flags.h"
+#include "ui/flags.h"
 
 namespace gyverhub {
     class Builder;
@@ -677,10 +677,10 @@ namespace gyverhub {
         }
 
         // ========================== FLAGS ==========================
-        bool Flags(GHflags<64>* var = nullptr, FSTR text = nullptr, FSTR label = nullptr, gyverhub::Color color = Colors::UNSET) {
+        bool Flags(gyverhub::Flags* var = nullptr, FSTR text = nullptr, FSTR label = nullptr, gyverhub::Color color = Colors::UNSET) {
             return _flags(true, var, text, label, color);
         }
-        bool Flags(GHflags<64>* var, CSREF text, CSREF label = "", gyverhub::Color color = Colors::UNSET) {
+        bool Flags(gyverhub::Flags* var, CSREF text, CSREF label = "", gyverhub::Color color = Colors::UNSET) {
             return _flags(false, var, text.c_str(), label.c_str(), color);
         }
 
