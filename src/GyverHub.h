@@ -17,6 +17,7 @@
 #include "utils2/json.h"
 #include "utils2/files.h"
 #include "hub/info.h"
+#include "hub/fs.h"
 
 #if GHI_ESP_BUILD
 #include <FS.h>
@@ -1140,7 +1141,7 @@ public:
         answ.reserve(100);
         
         uint16_t count = 0;
-        GH_showFiles(answ, "/", GHC_FS_MAX_DEPTH, &count);
+        GH_showFiles(answ, &count);
 
         answ.clear();
         answ.reserve(count + 50);
@@ -1148,7 +1149,7 @@ public:
         answ.key(F("fs"));
         answ += '{';
         answ.itemInteger(F("/"), 0);
-        GH_showFiles(answ, "/", GHC_FS_MAX_DEPTH);
+        GH_showFiles(answ);
         answ[answ.length() - 1] = '}';  // ',' = '}'
         answ += ',';
 
