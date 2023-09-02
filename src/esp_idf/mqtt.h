@@ -1,16 +1,11 @@
 #pragma once
-#include "../config.hpp"
-#include "../macro.hpp"
-
-#include <Arduino.h>
+#include "macro.hpp"
+#include "utils/stats.h"
 
 #ifndef ESP32
 #error "Native MQTT only available for ESP32"
 #endif
-
 #include <mqtt_client.h>
-
-#include "../utils/stats.h"
 
 class HubMQTT {
 private:

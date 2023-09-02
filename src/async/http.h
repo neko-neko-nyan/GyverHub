@@ -1,9 +1,7 @@
 #pragma once
-#include "../config.hpp"
-#include "../macro.hpp"
-#include "../utils2/mime.h"
-
-#include <Arduino.h>
+#include "macro.hpp"
+#include "utils2/mime.h"
+#include "utils2/files.h"
 #include <ESPAsyncWebServer.h>
 
 #ifndef GH_NO_HTTP_OTA
@@ -12,20 +10,14 @@
 #endif
 #endif
 
-#if GHC_FS == GHC_FS_LITTLEFS
-#include <LittleFS.h>
-#elif GHC_FS == GHC_FS_SPIFFS
-#include <SPIFFS.h>
-#endif
-
 #ifndef GH_NO_DNS
 #include <DNSServer.h>
 #endif
 
 #ifdef GH_INCLUDE_PORTAL
-#include "../esp_inc/index.h"
-#include "../esp_inc/script.h"
-#include "../esp_inc/style.h"
+#include "esp_inc/index.h"
+#include "esp_inc/script.h"
+#include "esp_inc/style.h"
 #endif
 
 #define GH_HTTP_UPLOAD "1"

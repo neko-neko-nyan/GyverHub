@@ -1,5 +1,4 @@
 #include "stats.h"
-#include <Arduino.h>
 #include "macro.hpp"
 
 GHI_PGM(_GH_CMD0, "focus");

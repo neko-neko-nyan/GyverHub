@@ -1,6 +1,4 @@
 #pragma once
-#include <Arduino.h>
-
 #include "macro.hpp"
 #include "hub/client.h"
 #include "utils2/mime.h"
@@ -21,24 +19,14 @@
 #endif
 #endif
 
-#if GHC_FS == GHC_FS_LITTLEFS
-#include <LittleFS.h>
-#elif GHC_FS == GHC_FS_SPIFFS
-#ifdef ESP8266
-#include <FS.h>
-#else
-#include <SPIFFS.h>
-#endif
-#endif
-
 #ifndef GH_NO_DNS
 #include <DNSServer.h>
 #endif
 
 #ifdef GH_INCLUDE_PORTAL
-#include "../esp_inc/index.h"
-#include "../esp_inc/script.h"
-#include "../esp_inc/style.h"
+#include "esp_inc/index.h"
+#include "esp_inc/script.h"
+#include "esp_inc/style.h"
 #endif
 
 class HubHTTP {

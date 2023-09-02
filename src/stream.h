@@ -1,6 +1,5 @@
 #pragma once
 #include "config.hpp"
-#include <Arduino.h>
 #include "utils/stats.h"
 
 

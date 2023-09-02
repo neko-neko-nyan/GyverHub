@@ -1,7 +1,21 @@
 #include "files.h"
-#include "GyverHub.h"
+#include "macro.hpp"
 
-#if defined(ESP32)
+#if GHC_FS == GHC_FS_SPIFFS
+
+void gyverhub::mkdirRecursive(char *path) {
+    (void) path;
+}
+
+void gyverhub::mkdirRecursive(const char *path) {
+    (void) path;
+}
+
+void gyverhub::rmdirRecursive(const char *path) {
+    (void) path;
+}
+
+#elif GHC_FS != GHC_FS_NONE
 
 static void mkdir_p(char *path) {
     char* ptr = strchr(path, '/');
@@ -41,14 +55,5 @@ void gyverhub::rmdirRecursive(const char *path) {
     }
     free(pathStr);
 }
-
-#elif defined(ESP8266)
-
-void gyverhub::mkdirRecursive(GHI_UNUSED char *path) {}
-
-void gyverhub::mkdirRecursive(GHI_UNUSED const char *path) {}
-
-void gyverhub::rmdirRecursive(GHI_UNUSED const char *path) {}
-
 
 #endif

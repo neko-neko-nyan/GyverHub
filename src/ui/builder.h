@@ -1,5 +1,4 @@
 #pragma once
-#include <Arduino.h>
 #include "macro.hpp"
 #include "ui/canvas.h"
 #include "ui/button.h"

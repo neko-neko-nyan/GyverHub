@@ -1,5 +1,4 @@
 #include "misc.h"
-#include "GyverHub.h"
 
 char* GH_splitter(char* list, char div) {
     static uint8_t prev, end;

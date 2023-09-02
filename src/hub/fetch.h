@@ -2,17 +2,6 @@
 #include "macro.hpp"
 #include "utils2/json.h"
 #include "utils2/base64.h"
-#include <Arduino.h>
-
-#if GHC_FS == GHC_FS_LITTLEFS
-#include <LittleFS.h>
-#elif GHC_FS == GHC_FS_SPIFFS
-#ifdef ESP8266
-#include <FS.h>
-#else
-#include <SPIFFS.h>
-#endif
-#endif
 
 namespace gyverhub {
     class FetchBuilder;

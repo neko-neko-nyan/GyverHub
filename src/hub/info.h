@@ -1,5 +1,6 @@
 #pragma once
 
+#include "macro.hpp"
 #include "utils2/json.h"
 
 #ifdef ESP8266
@@ -8,16 +9,6 @@
 
 #ifdef ESP32
 #include <WiFi.h>
-#endif
-
-#if GHC_FS == GHC_FS_LITTLEFS
-#include <LittleFS.h>
-#elif GHC_FS == GHC_FS_SPIFFS
-#ifdef ESP8266
-#include <FS.h>
-#else
-#include <SPIFFS.h>
-#endif
 #endif
 
 
@@ -104,7 +95,7 @@ namespace gyverhub {
 
 
             answ.concat(F(",\"net\":{"));
-    #if GHI_ESP_BUILD
+#if GHI_ESP_BUILD
             switch (WiFi.getMode()) {
             case WIFI_AP:
                 answ.concat(F("\"Mode\":\"AP\",\"IP\":\""));
@@ -135,39 +126,39 @@ namespace gyverhub {
             answ.concat(F("\",\"RSSI\":\""));
             answ.concat(constrain(2 * (WiFi.RSSI() + 100), 0, 100));
             answ.concat(F("%\","));
-    #endif
+#endif
             buildGroup(handler, answ, InfoGroup::NETWORK);
             
 
             answ.concat(F(",\"memory\":{"));
 
-    #if GHI_ESP_BUILD
+#if GHI_ESP_BUILD
             answ.concat(F("\"RAM\":["));
             answ.concat(ESP.getFreeHeap());
             answ.concat(F(",0],"));
 
-    #if GHC_FS != GHC_FS_NONE
+#if GHC_FS != GHC_FS_NONE
             answ.concat(F("\"FS\":["));
-    #ifdef ESP8266
+#ifdef ESP8266
             FSInfo fs_info;
             GHI_FS.info(fs_info);
             answ.concat(fs_info.usedBytes);
             answ.concat(',');
             answ.concat(fs_info.totalBytes);
-    #else
+#else
             answ.concat(GHI_FS.usedBytes());
             answ.concat(',');
             answ.concat(GHI_FS.totalBytes());
-    #endif
+#endif
             answ.concat(F("],"));
-    #endif
+#endif
     
             answ.concat(F("\"Sketch\":["));
             answ.concat(ESP.getSketchSize());
             answ.concat(',');
             answ.concat(ESP.getFreeSketchSpace());
             answ.concat(F("],"));
-    #endif
+#endif
             buildGroup(handler, answ, InfoGroup::MEMORY);
 
 
@@ -175,13 +166,13 @@ namespace gyverhub {
             answ.concat(millis() / 1000ul);
             answ.concat(F(",\"Platform\":\"" GHI_PLATFORM_STR "\","));
 
-    #if GHI_ESP_BUILD
+#if GHI_ESP_BUILD
             answ.concat(F("\"CPU freq\":"));
             answ.concat(ESP.getCpuFreqMHz());
             answ.concat(F(",\"Flash chip size\":\""));
             answ.concat(String(ESP.getFlashChipSize() / 1000.0, 1));
             answ.concat(F(" kB\","));
-    #endif
+#endif
 
             buildGroup(handler, answ, InfoGroup::SYSTEM);
             answ.concat(F("}}\n"));

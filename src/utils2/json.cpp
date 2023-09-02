@@ -1,10 +1,11 @@
 #include "json.h"
 
-#if defined(ESP32) && !defined(strchr_P)
+#ifndef strchr_P
+#ifdef ESP32
 #define strchr_P(a, b) strchr((a),(b))
-#endif
-#if defined(ESP8266) && !defined(strchr_P)
+#else
 #define strchr_P(a, b) memchr_P((a),(b), strlen_P((a)))
+#endif
 #endif
 
 void gyverhub::Json::appendEscaped(const void *str, bool fstr, char sym) {

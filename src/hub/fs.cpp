@@ -1,16 +1,5 @@
 #include "fs.h"
 
-#if GHC_FS == GHC_FS_LITTLEFS
-#include <LittleFS.h>
-#elif GHC_FS == GHC_FS_SPIFFS
-#ifdef ESP8266
-#include <FS.h>
-#else
-#include <SPIFFS.h>
-#endif
-#endif
-
-
 void GH_showFiles(gyverhub::Json& answ, uint16_t* count, const String& path, GHI_UNUSED uint8_t levels) {
 #if GHC_FS != GHC_FS_NONE
 #ifdef ESP8266

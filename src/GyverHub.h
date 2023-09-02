@@ -1,11 +1,8 @@
 #pragma once
 
-#include <Arduino.h>
-
+#include "macro.hpp"
 #include "ui/builder.h"
 #include "ui/canvas.h"
-#include "config.hpp"
-#include "macro.hpp"
 #include "stream.h"
 #include "ui/color.h"
 #include "ui/flags.h"
@@ -20,7 +17,6 @@
 #include "hub/fs.h"
 
 #if GHI_ESP_BUILD
-#include <FS.h>
 #include "hub/fetch.h"
 #endif
 
@@ -45,16 +41,6 @@
 #if !GHI_ESP_BUILD
 #define SIGRD 5
 #include <avr/boot.h>
-#endif
-
-#if GHC_FS == GHC_FS_LITTLEFS
-#include <LittleFS.h>
-#elif GHC_FS == GHC_FS_SPIFFS
-#ifdef ESP8266
-#include <FS.h>
-#else
-#include <SPIFFS.h>
-#endif
 #endif
 
 #if GH_MQTT_IMPL == GH_IMPL_ASYNC

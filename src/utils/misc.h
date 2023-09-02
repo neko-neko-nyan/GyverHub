@@ -1,5 +1,4 @@
 #pragma once
-#include <Arduino.h>
 #include "macro.hpp"
 
 template <uint8_t SIZE>

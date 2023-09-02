@@ -1,11 +1,7 @@
 #pragma once
-#include "../config.hpp"
-#include "../macro.hpp"
-
-#include <Arduino.h>
+#include "macro.hpp"
+#include "utils/stats.h"
 #include <ESPAsyncWebServer.h>
-
-#include "../utils/stats.h"
 
 class HubWS {
     // ============ PROTECTED =============
