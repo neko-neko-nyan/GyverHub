@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include "macro.hpp"
+#include <limits.h>
 
 namespace gyverhub {
     class Flags {

@@ -99,6 +99,9 @@
 #if GHC_FS == GHC_FS_LITTLEFS
 #define GHI_FS LittleFS
 #elif GHC_FS == GHC_FS_SPIFFS
+#ifdef ESP8266
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 #define GHI_FS SPIFFS
 #else
 #define GHI_FS !!!

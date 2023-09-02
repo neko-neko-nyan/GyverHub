@@ -24,6 +24,7 @@
 #endif
 
 #ifdef ESP8266
+#include <flash_hal.h>
 #include <ESP8266WiFi.h>
 #if GHI_MOD_ENABLED(GH_MOD_OTA_URL)
 #include <ESP8266httpUpdate.h>
@@ -48,7 +49,11 @@
 #if GHC_FS == GHC_FS_LITTLEFS
 #include <LittleFS.h>
 #elif GHC_FS == GHC_FS_SPIFFS
+#ifdef ESP8266
+#include <FS.h>
+#else
 #include <SPIFFS.h>
+#endif
 #endif
 
 #if GH_MQTT_IMPL == GH_IMPL_ASYNC
@@ -159,7 +164,7 @@ public:
     }
 
     /// установить пин-код для открытия устройства (значение больше 1000, не может начинаться с 000..)
-    void removePin(uint32_t pin) {
+    void removePin() {
         this->pinHash = 0;
     }
 
@@ -813,7 +818,7 @@ public:
                 } else {
 #ifdef ESP8266
                     ota_type = U_FS;
-                    ota_size = (size_t)&_FS_end - (size_t)&_FS_start;
+                    ota_size = (size_t)FS_end - (size_t)FS_start;
                     close_all_fs();
 #else
                     ota_type = U_SPIFFS;
@@ -1049,7 +1054,7 @@ public:
         if (!fetch.isActive() && fetch.open(path.c_str()))
             fetch.getData(file, bytes, size, pgm);
     }
-    void _fetchEndHook(String& path) {
+    void _fetchEndHook() {
         fetch.close();
     }
 #endif
@@ -1127,9 +1132,10 @@ public:
         answerErr(F("Module disabled"));
     }
 
+#if GHC_FS != GHC_FS_NONE && (GHI_MOD_ENABLED(GH_MOD_FSBR) || GHI_MOD_ENABLED(GH_MOD_FORMAT) || GHI_MOD_ENABLED(GH_MOD_DELETE) || GHI_MOD_ENABLED(GH_MOD_RENAME))
+
     // ======================= FSBR ========================
     void answerFsbr() {
-#if GHC_FS != GHC_FS_NONE
         gyverhub::Json answ;
         answ.reserve(100);
         
@@ -1160,10 +1166,9 @@ public:
 #endif
         answ.end();
         _answer(answ);
-#else
-        answerDsbl();
-#endif
     }
+
+#endif
 
     // ======================= DISCOVER ========================
     void answerDiscover() {
@@ -1187,9 +1192,10 @@ public:
         _answer(answ);
     }
 
+#if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_FETCH)
+
     // ======================= CHUNK ========================
     void answerChunk() {
-#if GHC_FS != GHC_FS_NONE
         gyverhub::Json answ;
         answ.reserve(GHC_FETCH_CHUNK_SIZE + 100);
         answ.begin();
@@ -1197,8 +1203,9 @@ public:
         fetch.nextChunk(answ);
         answ.end();
         _answer(answ);
-#endif
     }
+
+#endif
 
     // ======================= ANSWER ========================
     void _answer(const String& answ, bool close = true) {

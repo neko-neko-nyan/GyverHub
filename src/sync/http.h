@@ -24,7 +24,11 @@
 #if GHC_FS == GHC_FS_LITTLEFS
 #include <LittleFS.h>
 #elif GHC_FS == GHC_FS_SPIFFS
+#ifdef ESP8266
+#include <FS.h>
+#else
 #include <SPIFFS.h>
+#endif
 #endif
 
 #ifndef GH_NO_DNS
@@ -169,7 +173,7 @@ class HubHTTP {
 #ifdef ESP8266
                             ota_type = U_FS;
                             close_all_fs();
-                            ota_size = (size_t)&_FS_end - (size_t)&_FS_start;
+                            ota_size = (size_t)FS_end - (size_t)FS_start;
 #else
                             ota_type = U_SPIFFS;
                             ota_size = UPDATE_SIZE_UNKNOWN;
@@ -261,7 +265,7 @@ class HubHTTP {
 
 #if GHC_FS != GHC_FS_NONE
     virtual void _fetchStartHook(String &path, File **file, const uint8_t **bytes, uint32_t *size, bool *pgm) = 0;
-    virtual void _fetchEndHook(String &path) = 0;
+    virtual void _fetchEndHook() = 0;
 #endif
 
    private:
@@ -297,13 +301,13 @@ class HubHTTP {
             server.send(200, gyverhub::getMimeByPath(path.c_str(), path.length()), "");
             if (pgm) server.sendContent_P((PGM_P)bytes, size);
             else server.sendContent((const char *) bytes, size);
-            _fetchEndHook(path);
+            _fetchEndHook();
             return 1;
         }
 
         if (file_p && *file_p) {
             server.streamFile(*file_p, gyverhub::getMimeByPath(path.c_str(), path.length()));
-            _fetchEndHook(path);
+            _fetchEndHook();
             return 1;
         }
 
