@@ -1,4 +1,14 @@
 #pragma once
+#ifndef GHI_IMPL_SELECT
+# error Never include implementation-specific files directly, use "impl/impl_select.h"
+#endif
+#include "macro.hpp"
+#if !GHI_ESP_BUILD
+# error This implementation only available on ESP32 or ESP8266
+#endif
+#if !__has_include(<WebSocketsServer.h>)
+# error Missing dependency: WebSocketsServer
+#endif
 #include "hub/types.h"
 #include <WebSocketsServer.h>
 

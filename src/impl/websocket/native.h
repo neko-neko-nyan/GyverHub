@@ -1,11 +1,12 @@
 #pragma once
-
-#include "hub/types.h"
-
-#ifndef ESP32
-#error "Native HTTP only available for ESP32"
+#ifndef GHI_IMPL_SELECT
+# error Never include implementation-specific files directly, use "impl/impl_select.h"
 #endif
-
+#include "macro.hpp"
+#if !defined(ESP32)
+# error This implementation only available on ESP32
+#endif
+#include "hub/types.h"
 #include <esp_http_server.h>
 
 class HubWS {

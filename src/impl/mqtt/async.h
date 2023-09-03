@@ -1,6 +1,17 @@
 #pragma once
+#ifndef GHI_IMPL_SELECT
+# error Never include implementation-specific files directly, use "impl/impl_select.h"
+#endif
+#include "macro.hpp"
+#if !GHI_ESP_BUILD
+# error This implementation only available on ESP32 or ESP8266
+#endif
+#if !__has_include(<AsyncMqttClient.h>)
+# error Missing dependency: AsyncMqttClient
+#endif
 #include "hub/types.h"
 #include <AsyncMqttClient.h>
+
 
 class HubMQTT {
     // ============ PUBLIC =============

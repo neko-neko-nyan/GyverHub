@@ -1,4 +1,21 @@
 #pragma once
+#ifndef GHI_IMPL_SELECT
+# error Never include implementation-specific files directly, use "impl/impl_select.h"
+#endif
+#include "macro.hpp"
+#if !GHI_ESP_BUILD
+# error This implementation only available on ESP32 or ESP8266
+#endif
+#ifdef ESP32
+#if !__has_include(<WebServer.h>)
+# error Missing dependency: WebServer
+#endif
+#else
+#if !__has_include(<ESP8266WebServer.h>)
+# error Missing dependency: ESP8266WebServer
+#endif
+#endif
+#include "hub/types.h"
 #include "hub/client.h"
 #include "utils/mime.h"
 #include "utils/files.h"

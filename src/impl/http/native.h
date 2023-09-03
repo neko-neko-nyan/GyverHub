@@ -1,5 +1,11 @@
 #pragma once
-
+#ifndef GHI_IMPL_SELECT
+# error Never include implementation-specific files directly, use "impl/impl_select.h"
+#endif
+#include "macro.hpp"
+#if !defined(ESP32)
+# error This implementation only available on ESP32
+#endif
 #include "hub/types.h"
 #include "utils/mime.h"
 #include "utils/files.h"
@@ -7,10 +13,6 @@
 #include "esp_inc/index.h"
 #include "esp_inc/script.h"
 #include "esp_inc/style.h"
-
-#ifndef ESP32
-#error "Native HTTP only available for ESP32"
-#endif
 
 #include <esp_http_server.h>
 #include <fcntl.h>

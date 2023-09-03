@@ -15,6 +15,7 @@
 #include "hub/info.h"
 #include "hub/fs.h"
 #include "serial.h"
+#include "impl/impl_select.h"
 
 #if GHI_ESP_BUILD
 #include "hub/fetch.h"
@@ -41,38 +42,6 @@
 #if !GHI_ESP_BUILD
 #define SIGRD 5
 #include <avr/boot.h>
-#endif
-
-#if GHC_MQTT_IMPL == GHC_IMPL_ASYNC
-# include "async/mqtt.h"
-#elif GHC_MQTT_IMPL == GHC_IMPL_SYNC
-# include "sync/mqtt.h"
-#elif GHC_MQTT_IMPL == GHC_IMPL_NATIVE
-# include "esp_idf/mqtt.h"
-#elif GHC_MQTT_IMPL == GHC_IMPL_NONE
-
-class HubMQTT {
-   public:
-    void setupMQTT(GHI_UNUSED const char* host, GHI_UNUSED uint16_t port, GHI_UNUSED const char* login = nullptr, GHI_UNUSED const char* pass = nullptr,
-     GHI_UNUSED uint8_t nqos = 0, GHI_UNUSED bool nret = 0) {}
-};
-
-#endif
-
-
-#if GHC_MQTT_IMPL == GHC_IMPL_ASYNC
-# include "async/http.h"
-# include "async/ws.h"
-#elif GHC_MQTT_IMPL == GHC_IMPL_SYNC
-# include "sync/http.h"
-# include "sync/ws.h"
-#elif GHC_MQTT_IMPL == GHC_IMPL_NATIVE
-# include "esp_idf/http_ws.h"
-#elif GHC_MQTT_IMPL == GHC_IMPL_NONE
-
-class HubHTTP {};
-class HubWS {};
-
 #endif
 
 // ========================== CLASS ==========================
