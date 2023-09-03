@@ -19,7 +19,7 @@
 #include "hub/client.h"
 #include "utils/mime.h"
 #include "utils/files.h"
-
+#include "hub/portal.h"
 
 #ifdef ESP8266
 #include <ESP8266WebServer.h>
@@ -34,15 +34,11 @@
 #endif
 #endif
 
-#ifndef GH_NO_DNS
+#if GHI_MOD_ENABLED(GH_MOD_DNS)
 #include <DNSServer.h>
 #endif
 
-#ifdef GH_INCLUDE_PORTAL
-#include "esp_inc/index.h"
-#include "esp_inc/script.h"
-#include "esp_inc/style.h"
-#endif
+#define GH__ENABLE_DNS ((GHI_MOD_ENABLED(GH_MOD_PORTAL) || (GHI_MOD_ENABLED(GH_MOD_FILE_PORTAL) && GHC_FS != GHC_FS_NONE)) && GHI_MOD_ENABLED(GH_MOD_DNS))
 
 class HubHTTP {
    public:
@@ -75,20 +71,17 @@ class HubHTTP {
 #endif
 
 // captive portal
-#ifndef GH_NO_DNS
+#if GH__ENABLE_DNS
             else {
-#if defined(GH_INCLUDE_PORTAL)
                 gzip_h();
-                cache_h();
-                server.send_P(200, "text/html", (PGM_P)hub_index_h, (size_t)hub_index_h_len);
-                return;
-
-#elif defined(GH_FILE_PORTAL)
+#if GHI_MOD_ENABLED(GH_MOD_FILE_PORTAL) && GHC_FS != GHC_FS_NONE
                 File f = GHI_FS.open(F("/hub/index.html.gz"), "r");
                 if (f) server.streamFile(f, F("text/html"));
                 else server.send(404);
-                return;
+#else
+                server.send_P(200, "text/html", (PGM_P)gyverhub::portal::index_start, (size_t)(gyverhub::portal::index_end - gyverhub::portal::index_start));
 #endif
+                return;
             }
 #endif
             server.send(404);
@@ -198,24 +191,7 @@ class HubHTTP {
 #endif
 
 // portal
-#if defined(GH_INCLUDE_PORTAL)
-        server.on("/", [this]() {
-            gzip_h();
-            cache_h();
-            server.send_P(200, "text/html", (PGM_P)hub_index_h, (size_t)hub_index_h_len);
-        });
-        server.on("/script.js", [this]() {
-            gzip_h();
-            cache_h();
-            server.send_P(200, "text/javascript", (PGM_P)hub_script_h, (size_t)hub_script_h_len);
-        });
-        server.on("/style.css", [this]() {
-            gzip_h();
-            cache_h();
-            server.send_P(200, "text/css", (PGM_P)hub_style_h, (size_t)hub_style_h_len);
-        });
-
-#elif defined(GH_FILE_PORTAL) && !defined(GH_NO_FS)
+#if GHI_MOD_ENABLED(GH_MOD_FILE_PORTAL) && GHC_FS != GHC_FS_NONE
         server.on("/", [this]() {
             File f = GHI_FS.open(F("/hub/index.html.gz"), "r");
             if (f) server.streamFile(f, F("text/html"));
@@ -233,10 +209,26 @@ class HubHTTP {
             if (f) server.streamFile(f, F("text/css"));
             else server.send(404);
         });
+#elif GHI_MOD_ENABLED(GH_MOD_PORTAL)
+        server.on("/", [this]() {
+            gzip_h();
+            cache_h();
+            server.send_P(200, "text/html", (PGM_P)gyverhub::portal::index_start, (size_t)(gyverhub::portal::index_end - gyverhub::portal::index_start));
+        });
+        server.on("/script.js", [this]() {
+            gzip_h();
+            cache_h();
+            server.send_P(200, "text/javascript", (PGM_P)gyverhub::portal::script_start, (size_t)(gyverhub::portal::script_end - gyverhub::portal::script_start));
+        });
+        server.on("/style.css", [this]() {
+            gzip_h();
+            cache_h();
+            server.send_P(200, "text/css", (PGM_P)gyverhub::portal::style_start, (size_t)(gyverhub::portal::style_end - gyverhub::portal::style_start));
+        });
 #endif
 
 // DNS for captive portal
-#if defined(GH_INCLUDE_PORTAL) && !defined(GH_NO_DNS)
+#if GH__ENABLE_DNS
         if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA) {
             dns_f = 1;
             dns.start(53, "*", WiFi.softAPIP());
@@ -249,14 +241,14 @@ class HubHTTP {
 
     void endHTTP() {
         server.stop();
-#ifndef GH_NO_DNS
+#if GH__ENABLE_DNS
         if (dns_f) dns.stop();
 #endif
     }
 
     void tickHTTP() {
         server.handleClient();
-#ifndef GH_NO_DNS
+#if GH__ENABLE_DNS
         if (dns_f) dns.processNextRequest();
 #endif
     }
@@ -329,8 +321,10 @@ class HubHTTP {
     bool updating = false;
 #endif
 
-#ifndef GH_NO_DNS
+#if GH__ENABLE_DNS
     bool dns_f = false;
     DNSServer dns;
 #endif
 };
+
+#undef GH__ENABLE_DNS

@@ -7,12 +7,9 @@
 # error This implementation only available on ESP32
 #endif
 #include "hub/types.h"
+#include "hub/portal.h"
 #include "utils/mime.h"
 #include "utils/files.h"
-
-#include "esp_inc/index.h"
-#include "esp_inc/script.h"
-#include "esp_inc/style.h"
 
 #include <esp_http_server.h>
 #include <fcntl.h>
@@ -375,18 +372,16 @@ protected:
 #endif
 
 
-#ifndef GH_NO_PORTAL
+#if GHI_MOD_ENABLED(GH_MOD_FILE_PORTAL) && GHC_FS != GHC_FS_NONE
         GH__SETH(HTTP_GET, "/favicon.svg", HubHTTP::handlerSendString, "");
-
-#if defined(GH_INCLUDE_PORTAL)
-        GH__SETH(HTTP_GET, "/", HubHTTP::handlerSendBinData, new String(hub_index_h, hub_index_h_len));
-        GH__SETH(HTTP_GET, "/script.js", HubHTTP::handlerSendBinData, new String(hub_script_h, hub_script_h_len));
-        GH__SETH(HTTP_GET, "/style.css", HubHTTP::handlerSendBinData, new String(hub_style_h, hub_style_h_len));
-#elif !defined(GH_NO_FS)
         GH__SETH(HTTP_GET, "/", HubHTTP::handlerSendFile, "/hub/index.html.gz");
         GH__SETH(HTTP_GET, "/script.js", HubHTTP::handlerSendFile, "/hub/script.js.gz");
         GH__SETH(HTTP_GET, "/style.css", HubHTTP::handlerSendFile, "/hub/style.css.gz");
-#endif
+#elif GHI_MOD_ENABLED(GH_MOD_PORTAL)
+        GH__SETH(HTTP_GET, "/favicon.svg", HubHTTP::handlerSendString, "");
+        GH__SETH(HTTP_GET, "/", HubHTTP::handlerSendBinData, new String(gyverhub::portal::index_start, gyverhub::portal::index_end - gyverhub::portal::index_start));
+        GH__SETH(HTTP_GET, "/script.js", HubHTTP::handlerSendBinData, new String(gyverhub::portal::script_start, gyverhub::portal::script_end - gyverhub::portal::script_start));
+        GH__SETH(HTTP_GET, "/style.css", HubHTTP::handlerSendBinData, new String(gyverhub::portal::style_start, gyverhub::portal::style_end - gyverhub::portal::style_start));
 #endif
 
 

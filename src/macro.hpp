@@ -78,7 +78,11 @@
 #define GH_MOD_DELETE (1ul << 10)
 #define GH_MOD_RENAME (1ul << 11)
 
-#define GHC_MODS_ENABLED 0xFFFFFFFF
+#define GH_MOD_PORTAL (1ul << 16)
+#define GH_MOD_DNS (1ul << 17)
+#define GH_MOD_FILE_PORTAL (1ul << 18)
+
+#define GHC_MODS_ENABLED 0xfffbffff
 #define GHC_MODS_DISABLED ((~GHC_MODS_ENABLED) & 0xFFFF)
 
 // FS

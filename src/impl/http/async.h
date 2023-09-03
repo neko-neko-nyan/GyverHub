@@ -10,6 +10,7 @@
 # error Missing dependency: ESPAsyncWebServer
 #endif
 #include "hub/types.h"
+#include "hub/portal.h"
 #include "utils/mime.h"
 #include "utils/files.h"
 #include <ESPAsyncWebServer.h>
@@ -20,14 +21,8 @@
 #endif
 #endif
 
-#ifndef GH_NO_DNS
+#if GHI_MOD_ENABLED(GH_MOD_DNS)
 #include <DNSServer.h>
-#endif
-
-#ifdef GH_INCLUDE_PORTAL
-#include "esp_inc/index.h"
-#include "esp_inc/script.h"
-#include "esp_inc/style.h"
 #endif
 
 #define GH_HTTP_UPLOAD "1"
@@ -43,6 +38,8 @@
 #ifdef GH_NO_HTTP_OTA
 #define GH_HTTP_OTA "0"
 #endif
+
+#define GH__ENABLE_DNS ((GHI_MOD_ENABLED(GH_MOD_PORTAL) || (GHI_MOD_ENABLED(GH_MOD_FILE_PORTAL) && GHC_FS != GHC_FS_NONE)) && GHI_MOD_ENABLED(GH_MOD_DNS))
 
 class HubHTTP {
     // ============ PUBLIC =============
@@ -150,45 +147,11 @@ class HubHTTP {
 #endif
 #endif
 
-#if defined(GH_INCLUDE_PORTAL) && !defined(GH_NO_DNS)
-        if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA) {
-            dns_f = 1;
-            dns.start(53, "*", WiFi.softAPIP());
-        }
-        server.onNotFound([this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/html", hub_index_h, hub_index_h_len);
-            gzip_h(response);
-            cache_h(response);
-            request->send(response);
-        });
-#endif
-
-#ifndef GH_NO_PORTAL
+#if GHI_MOD_ENABLED(GH_MOD_FILE_PORTAL) && GHC_FS != GHC_FS_NONE
         server.on("/favicon.svg", HTTP_GET, [this](AsyncWebServerRequest* request) {
             AsyncWebServerResponse* response = request->beginResponse(200);
             request->send(response);
         });
-#ifdef GH_INCLUDE_PORTAL
-        server.on("/", HTTP_GET, [this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/html", hub_index_h, hub_index_h_len);
-            gzip_h(response);
-            cache_h(response);
-            request->send(response);
-        });
-        server.on("/script.js", HTTP_GET, [this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/javascript", hub_script_h, hub_script_h_len);
-            gzip_h(response);
-            cache_h(response);
-            request->send(response);
-        });
-        server.on("/style.css", HTTP_GET, [this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/css", hub_style_h, hub_style_h_len);
-            gzip_h(response);
-            cache_h(response);
-            request->send(response);
-        });
-#else
-#if GHC_FS != GHC_FS_NONE
         server.on("/", HTTP_GET, [this](AsyncWebServerRequest* request) {
             AsyncWebServerResponse* response = request->beginResponse(GHI_FS, "/hub/index.html.gz", "text/html");
             gzip_h(response);
@@ -207,7 +170,49 @@ class HubHTTP {
             cache_h(response);
             request->send(response);
         });
+#elif GHI_MOD_ENABLED(GH_MOD_PORTAL)
+        server.on("/favicon.svg", HTTP_GET, [this](AsyncWebServerRequest* request) {
+            AsyncWebServerResponse* response = request->beginResponse(200);
+            request->send(response);
+        });
+        server.on("/", HTTP_GET, [this](AsyncWebServerRequest* request) {
+            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/html", gyverhub::portal::index_start, gyverhub::portal::index_end - gyverhub::portal::index_start);
+            gzip_h(response);
+            cache_h(response);
+            request->send(response);
+        });
+        server.on("/script.js", HTTP_GET, [this](AsyncWebServerRequest* request) {
+            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/javascript", gyverhub::portal::script_start, gyverhub::portal::script_end - gyverhub::portal::script_start);
+            gzip_h(response);
+            cache_h(response);
+            request->send(response);
+        });
+        server.on("/style.css", HTTP_GET, [this](AsyncWebServerRequest* request) {
+            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/css", gyverhub::portal::style_start, gyverhub::portal::style_end - gyverhub::portal::style_start);
+            gzip_h(response);
+            cache_h(response);
+            request->send(response);
+        });
 #endif
+
+// DNS for captive portal
+#if GH__ENABLE_DNS
+        if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA) {
+            dns_f = 1;
+            dns.start(53, "*", WiFi.softAPIP());
+        }
+#if GHI_MOD_ENABLED(GH_MOD_FILE_PORTAL) && GHC_FS != GHC_FS_NONE
+        server.onNotFound([this](AsyncWebServerRequest* request) {
+            AsyncWebServerResponse* response = request->beginResponse(GHI_FS, "/hub/index.html.gz", "text/html");
+            gzip_h(response);
+            request->send(response);
+        });
+#else
+        server.onNotFound([this](AsyncWebServerRequest* request) {
+            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/html", gyverhub::portal::index_start, gyverhub::portal::index_end - gyverhub::portal::index_start);
+            gzip_h(response);
+            request->send(response);
+        });
 #endif
 #endif
         CORS();
@@ -220,13 +225,15 @@ class HubHTTP {
 
     void endHTTP() {
         server.end();
-#ifndef GH_NO_DNS
+#if GH__ENABLE_DNS
         if (dns_f) dns.stop();
 #endif
     }
 
     void tickHTTP() {
+#if GH__ENABLE_DNS
         if (dns_f) dns.processNextRequest();
+#endif
     }
 
    protected:
@@ -247,8 +254,10 @@ class HubHTTP {
     }
     File file;
 
-#ifndef GH_NO_DNS
+#if GH__ENABLE_DNS
     bool dns_f = false;
     DNSServer dns;
 #endif
 };
+
+#undef GH__ENABLE_DNS
