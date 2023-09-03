@@ -32,4 +32,21 @@ class HubWS {};
 # error GHC_HTTP_IMPL misconfigured
 #endif
 
+
+#if GHC_STREAM_IMPL == GHC_IMPL_NATIVE
+# include "stream.h"
+#elif GHC_STREAM_IMPL == GHC_IMPL_NONE
+class HubStream {};
+#else
+# error GHC_STREAM_IMPL misconfigured
+#endif
+
+
+#if GHC_BLUETOOTH_IMPL == GHC_IMPL_NONE
+class HubBluetooth {};
+#else
+# error GHC_BLUETOOTH_IMPL misconfigured
+#endif
+
+
 #undef GHI_IMPL_SELECT

@@ -1,10 +1,8 @@
 #pragma once
+#ifndef GHI_IMPL_SELECT
+# error Never include implementation-specific files directly, use "impl/impl_select.h"
+#endif
 #include "hub/types.h"
-
-
-#if !GHI_MOD_ENABLED(GH_MOD_SERIAL)
-class HubStream {};
-#else
 
 class HubStream {
    public:
@@ -31,4 +29,3 @@ class HubStream {
    private:
     Stream* stream = nullptr;
 };
-#endif

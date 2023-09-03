@@ -78,12 +78,6 @@
 #define GH_MOD_DELETE (1ul << 10)
 #define GH_MOD_RENAME (1ul << 11)
 
-#define GH_MOD_BT (1ul << 16)
-#define GH_MOD_WS (1ul << 17)
-#define GH_MOD_MQTT (1ul << 18)
-#define GH_MOD_HTTP (1ul << 19)
-#define GH_MOD_SERIAL (1ul << 20)
-
 #define GHC_MODS_ENABLED 0xFFFFFFFF
 #define GHC_MODS_DISABLED ((~GHC_MODS_ENABLED) & 0xFFFF)
 
@@ -124,6 +118,18 @@
 #define GHC_IMPL_SYNC 1
 #define GHC_IMPL_ASYNC 2
 #define GHC_IMPL_NATIVE 3
+
+#ifndef GHC_STREAM_IMPL
+#if defined(GHC_IMPL) && GHC_IMPL == GHC_IMPL_NONE
+#define GHC_STREAM_IMPL GHC_IMPL_NONE
+#else
+#define GHC_STREAM_IMPL GHC_IMPL_NATIVE
+#endif
+#endif
+
+#ifndef GHC_BLUETOOTH_IMPL
+#define GHC_BLUETOOTH_IMPL GHC_IMPL_NONE
+#endif
 
 #ifndef GHC_IMPL
 

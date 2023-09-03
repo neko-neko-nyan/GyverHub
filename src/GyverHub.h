@@ -14,7 +14,6 @@
 #include "utils/files.h"
 #include "hub/info.h"
 #include "hub/fs.h"
-#include "serial.h"
 #include "impl/impl_select.h"
 
 #if GHI_ESP_BUILD
@@ -444,22 +443,6 @@ public:
     // парсить строку вида PREFIX/ID/HUB_ID/CMD/NAME с отдельным value
     void parse(char* url, const char* value, gyverhub::ConnectionType from) {
         if (!running_f) return;
-
-#if !GHI_MOD_ENABLED(GH_MOD_SERIAL)
-        if (from == ConnectionType::STREAM) return;
-#endif
-#if !GHI_MOD_ENABLED(GH_MOD_BT)
-        if (from == ConnectionType::BLUETOOTH) return;
-#endif
-#if !GHI_MOD_ENABLED(GH_MOD_WS)
-        if (from == ConnectionType::WEBSOCKET) return;
-#endif
-#if !GHI_MOD_ENABLED(GH_MOD_HTTP)
-        if (from == ConnectionType::HTTP) return;
-#endif
-#if !GHI_MOD_ENABLED(GH_MOD_MQTT)
-        if (from == ConnectionType::MQTT) return;
-#endif
 
 #if GHI_ESP_BUILD && GHI_MOD_ENABLED(GH_MOD_OTA_URL)
         if (ota_url_f) return;
@@ -929,7 +912,7 @@ public:
             }
         }
 
-#if GHI_MOD_ENABLED(GH_MOD_SERIAL)
+#if GHC_STREAM_IMPL != GHC_IMPL_NONE
         tickStream();
 #endif
 #if GHC_HTTP_IMPL != GHC_IMPL_NONE && GHC_HTTP_IMPL != GHC_IMPL_NATIVE
@@ -1174,7 +1157,7 @@ public:
                 answerHTTP(answ);
                 break;
 #endif
-#if GHI_MOD_ENABLED(GH_MOD_SERIAL)
+#if GHC_STREAM_IMPL != GHC_IMPL_NONE
             case gyverhub::ConnectionType::STREAM:
                 sendStream(answ);
                 break;
@@ -1194,10 +1177,9 @@ public:
         client_ptr = nullptr;
         if (manual_cb) manual_cb(answ, broadcast);
 
-#if GHI_MOD_ENABLED(GH_MOD_SERIAL)
+#if GHC_STREAM_IMPL != GHC_IMPL_NONE
         if (focused(gyverhub::ConnectionType::STREAM)) sendStream(answ);
 #endif
-
 #if GHC_HTTP_IMPL != GHC_IMPL_NONE
         if (focused(gyverhub::ConnectionType::WEBSOCKET)) sendWS(answ);
 #endif

@@ -50,15 +50,55 @@
  * Реализация всех протоклов.
  * 
  * Доступные значения:
+ * 1. GHC_IMPL_NONE - Отключить все протоколы.
+ * 2. GHC_IMPL_SYNC - Синхронный.
+ * 3. GHC_IMPL_ASYNC - Асинхронный.
+ * 4. GHC_IMPL_NATIVE - Нативный.
+ * 
+ * Подробнее работа каждого значения описана в документации
+ * соответствующего протокола.
+ */
+// #define GHC_IMPL
+
+/**
+ * Реализация протокола MQTT. См. GHC_IMPL.
+ * 
+ * Доступные значения:
  * 1. GHC_IMPL_NONE - Отключить протокол (по умолчанию для AVR).
  * 2. GHC_IMPL_SYNC - Синхронный (по умолчанию для ESP32 и ESP8266).
  * 3. GHC_IMPL_ASYNC - Асинхронный.
  * 4. GHC_IMPL_NATIVE - Только для ESP32. Нативный асинхронный (esp-idf).
  */
-// #define GHC_IMPL
-
-// Реализация протокола MQTT. См. GHC_IMPL.
 // #define GHC_MQTT_IMPL GHC_IMPL
 
-// Реализация протокола HTTP. См. GHC_IMPL.
+/**
+ * Реализация протокола HTTP. См. GHC_IMPL.
+ * 
+ * Доступные значения:
+ * 1. GHC_IMPL_NONE - Отключить протокол (по умолчанию для AVR).
+ * 2. GHC_IMPL_SYNC - Синхронный (по умолчанию для ESP32 и ESP8266).
+ * 3. GHC_IMPL_ASYNC - Асинхронный.
+ * 4. GHC_IMPL_NATIVE - Только для ESP32. Нативный асинхронный (esp-idf).
+ */
 // #define GHC_HTTP_IMPL GHC_IMPL
+
+/**
+ * Реализация протокола stram (serial). См. GHC_IMPL.
+ * 
+ * Доступные значения:
+ * 1. GHC_IMPL_NONE - Отключить протокол.
+ * 2. GHC_IMPL_NATIVE - Нативный синхронный (по умолчанию).
+ * 
+ * Другие значения GHC_IMPL неявно обозначают GHC_IMPL_NATIVE.
+ */
+// #define GHC_STREAM_IMPL GHC_IMPL
+
+/**
+ * Реализация протокола Bluetooth. См. GHC_IMPL.
+ * 
+ * Доступные значения:
+ * 1. GHC_IMPL_NONE - Отключить протокол.
+ * 
+ * Другие значения GHC_IMPL неявно обозначают GHC_IMPL_NONE.
+ */
+// #define GHC_BLUETOOTH_IMPL GHC_IMPL
