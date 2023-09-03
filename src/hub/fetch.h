@@ -1,7 +1,7 @@
 #pragma once
 #include "macro.hpp"
-#include "utils2/json.h"
-#include "utils2/base64.h"
+#include "utils/json.h"
+#include "utils/base64.h"
 
 namespace gyverhub {
     class FetchBuilder;

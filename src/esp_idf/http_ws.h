@@ -1,8 +1,8 @@
 #pragma once
 
 #include "hub/types.h"
-#include "utils2/mime.h"
-#include "utils2/files.h"
+#include "utils/mime.h"
+#include "utils/files.h"
 
 #include "esp_inc/index.h"
 #include "esp_inc/script.h"

@@ -1,7 +1,7 @@
 #pragma once
 #include "hub/client.h"
-#include "utils2/mime.h"
-#include "utils2/files.h"
+#include "utils/mime.h"
+#include "utils/files.h"
 
 
 #ifdef ESP8266

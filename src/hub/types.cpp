@@ -1,5 +1,4 @@
 #include "hub/types.h"
-#include "macro.hpp"
 
 GHI_PGM(_GH_CMD0, "focus");
 GHI_PGM(_GH_CMD1, "ping");
