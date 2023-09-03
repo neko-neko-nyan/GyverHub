@@ -1,6 +1,5 @@
 #pragma once
-#include "macro.hpp"
-#include "utils/stats.h"
+#include "hub/types.h"
 
 #ifndef ESP32
 #error "Native MQTT only available for ESP32"
@@ -52,7 +51,7 @@ private:
             memcpy(buf, event->data, event->data_len);
             buf[event->data_len] = 0;
 
-            self->parse(buf1, buf, GH_MQTT);
+            self->parse(buf1, buf, gyverhub::ConnectionType::MQTT);
             break;
         }
 
@@ -146,7 +145,7 @@ public:
     }
 
 protected:
-    virtual void parse(char* url, const char* value, GHconn_t from) = 0;
+    virtual void parse(char* url, const char* value, gyverhub::ConnectionType from) = 0;
     virtual const char* getPrefix() = 0;
     virtual const char* getID() = 0;
 

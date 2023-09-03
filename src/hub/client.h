@@ -1,17 +1,16 @@
 #pragma once
-#include <Arduino.h>
+#include "hub/types.h"
 
-#include "utils/stats.h"
 
 struct GHclient {
     GHclient() {}
-    GHclient(GHconn_t nfrom, const char* nid) {
+    GHclient(gyverhub::ConnectionType nfrom, const char* nid) {
         from = nfrom;
         if (strlen(nid) <= 8) strcpy(id, nid);
     }
 
     // тип соединения
-    GHconn_t from = GH_SYSTEM;
+    gyverhub::ConnectionType from = gyverhub::ConnectionType::UNKNOWN;
 
     // id клиента
     char id[9] = {'\0'};

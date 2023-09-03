@@ -1,6 +1,5 @@
 #pragma once
-#include "macro.hpp"
-#include "utils/stats.h"
+#include "hub/types.h"
 #include <WebSocketsServer.h>
 
 class HubWS {
@@ -8,7 +7,7 @@ class HubWS {
    protected:
     HubWS() : ws(GHC_WS_PORT, "", "hub") {}
 
-    virtual void parse(char* url, GHconn_t from) = 0;
+    virtual void parse(char* url, gyverhub::ConnectionType from) = 0;
 
     void beginWS() {
         ws.onEvent([this](uint8_t num, WStype_t type, uint8_t* data, GHI_UNUSED size_t len) {
@@ -30,7 +29,7 @@ class HubWS {
                     /*char buf[len + 1];
                     memcpy(buf, data, len);
                     buf[len] = 0;*/
-                    parse((char*)data, GH_WS);
+                    parse((char*)data, gyverhub::ConnectionType::WEBSOCKET);
                 } break;
 
                 default:

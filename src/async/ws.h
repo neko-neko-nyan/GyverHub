@@ -1,6 +1,5 @@
 #pragma once
-#include "macro.hpp"
-#include "utils/stats.h"
+#include "hub/types.h"
 #include <ESPAsyncWebServer.h>
 
 class HubWS {
@@ -10,7 +9,7 @@ class HubWS {
         server.addHandler(&ws);
     }
 
-    virtual void parse(char* url, GHconn_t from) = 0;
+    virtual void parse(char* url, gyverhub::ConnectionType from) = 0;
 
     void beginWS() {
         ws.onEvent([this](GHI_UNUSED AsyncWebSocket* server, GHI_UNUSED AsyncWebSocketClient* client, AwsEventType etype, void* arg, uint8_t* data, size_t len) {
@@ -31,7 +30,7 @@ class HubWS {
                     AwsFrameInfo* ws_info = (AwsFrameInfo*)arg;
                     if (ws_info->final && ws_info->index == 0 && ws_info->len == len && ws_info->opcode == WS_TEXT) {
                         clientID = client->id();
-                        parse((char*)data, GH_WS);
+                        parse((char*)data, gyverhub::ConnectionType::WEBSOCKET);
                     }
                 } break;
 

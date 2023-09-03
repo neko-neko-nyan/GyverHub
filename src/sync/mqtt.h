@@ -1,6 +1,5 @@
 #pragma once
-#include "macro.hpp"
-#include "utils/stats.h"
+#include "hub/types.h"
 #include <PubSubClient.h>
 
 class HubMQTT {
@@ -25,7 +24,7 @@ class HubMQTT {
 
     // ============ PROTECTED =============
    protected:
-    virtual void parse(char* url, const char *value, GHconn_t from) = 0;
+    virtual void parse(char* url, const char *value, gyverhub::ConnectionType from) = 0;
     virtual const char* getPrefix() = 0;
     virtual const char* getID() = 0;
 
@@ -34,7 +33,7 @@ class HubMQTT {
             char buf[len + 1];
             memcpy(buf, data, len);
             buf[len] = 0;
-            parse(topic, buf, GH_MQTT);
+            parse(topic, buf, gyverhub::ConnectionType::MQTT);
         });
     }
 

@@ -6,7 +6,14 @@
 /// Отладка библиотеки
 #define GHC_LIB_DEBUG 0
 
-/// Файловая система
+/**
+ * Файловая система
+ * 
+ * Доступные значения:
+ * 1. GHC_FS_NONE - Не использовать ФС.
+ * 2. GHC_FS_LITTLEFS - LittleFS (по умолчанию).
+ * 3. GHC_FS_SPIFFS - SPIFFS.
+ */
 #define GHC_FS GHC_FS_LITTLEFS
 
 /// версия библиотеки
@@ -38,3 +45,20 @@
 
 // путь к папке с файлами с HTTP доступом
 #define GHC_PUBLIC_PATH "/www"
+
+/**
+ * Реализация всех протоклов.
+ * 
+ * Доступные значения:
+ * 1. GHC_IMPL_NONE - Отключить протокол (по умолчанию для AVR).
+ * 2. GHC_IMPL_SYNC - Синхронный (по умолчанию для ESP32 и ESP8266).
+ * 3. GHC_IMPL_ASYNC - Асинхронный.
+ * 4. GHC_IMPL_NATIVE - Только для ESP32. Нативный асинхронный (esp-idf).
+ */
+// #define GHC_IMPL
+
+// Реализация протокола MQTT. См. GHC_IMPL.
+// #define GHC_MQTT_IMPL GHC_IMPL
+
+// Реализация протокола HTTP. См. GHC_IMPL.
+// #define GHC_HTTP_IMPL GHC_IMPL

@@ -77,13 +77,14 @@
 #define GH_MOD_READ (1ul << 9)
 #define GH_MOD_DELETE (1ul << 10)
 #define GH_MOD_RENAME (1ul << 11)
-#define GH_MOD_SERIAL (1ul << 12)
-#define GH_MOD_BT (1ul << 13)
-#define GH_MOD_WS (1ul << 14)
-#define GH_MOD_MQTT (1ul << 15)
-#define GH_MOD_HTTP (1ul << 16)
 
-#define GHC_MODS_ENABLED 0xFFFF
+#define GH_MOD_BT (1ul << 16)
+#define GH_MOD_WS (1ul << 17)
+#define GH_MOD_MQTT (1ul << 18)
+#define GH_MOD_HTTP (1ul << 19)
+#define GH_MOD_SERIAL (1ul << 20)
+
+#define GHC_MODS_ENABLED 0xFFFFFFFF
 #define GHC_MODS_DISABLED ((~GHC_MODS_ENABLED) & 0xFFFF)
 
 // FS
@@ -119,27 +120,25 @@
 
 // IMPL
 
-#define GH_IMPL_NONE 0
-#define GH_IMPL_SYNC 1
-#define GH_IMPL_ASYNC 2
-#define GH_IMPL_NATIVE 3
+#define GHC_IMPL_NONE 0
+#define GHC_IMPL_SYNC 1
+#define GHC_IMPL_ASYNC 2
+#define GHC_IMPL_NATIVE 3
 
-#ifndef GH_IMPL
+#ifndef GHC_IMPL
 
 #if GHI_ESP_BUILD
-#define GH_IMPL GH_IMPL_NONE
-#elif defined(GH_ASYNC)
-#define GH_IMPL GH_IMPL_ASYNC
+#define GHC_IMPL GHC_IMPL_SYNC
 #else
-#define GH_IMPL GH_IMPL_SYNC
+#define GHC_IMPL GHC_IMPL_NONE
 #endif
 
-#endif // !defined(GH_IMPL)
+#endif // !defined(GHC_IMPL)
 
-#ifndef GH_MQTT_IMPL
-#define GH_MQTT_IMPL GH_IMPL
+#ifndef GHC_MQTT_IMPL
+#define GHC_MQTT_IMPL GHC_IMPL
 #endif
 
-#ifndef GH_HTTP_IMPL
-#define GH_HTTP_IMPL GH_IMPL
+#ifndef GHC_HTTP_IMPL
+#define GHC_HTTP_IMPL GHC_IMPL
 #endif

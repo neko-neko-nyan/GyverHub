@@ -7,14 +7,14 @@
 #include "ui/color.h"
 #include "ui/flags.h"
 #include "ui/log.h"
-#include "utils/misc.h"
-#include "utils/stats.h"
+#include "utils2/strings.h"
 #include "utils2/base64.h"
 #include "utils2/timer.h"
 #include "utils2/json.h"
 #include "utils2/files.h"
 #include "hub/info.h"
 #include "hub/fs.h"
+#include "serial.h"
 
 #if GHI_ESP_BUILD
 #include "hub/fetch.h"
@@ -43,13 +43,13 @@
 #include <avr/boot.h>
 #endif
 
-#if GH_MQTT_IMPL == GH_IMPL_ASYNC
+#if GHC_MQTT_IMPL == GHC_IMPL_ASYNC
 # include "async/mqtt.h"
-#elif GH_MQTT_IMPL == GH_IMPL_SYNC
+#elif GHC_MQTT_IMPL == GHC_IMPL_SYNC
 # include "sync/mqtt.h"
-#elif GH_MQTT_IMPL == GH_IMPL_NATIVE
+#elif GHC_MQTT_IMPL == GHC_IMPL_NATIVE
 # include "esp_idf/mqtt.h"
-#elif GH_MQTT_IMPL == GH_IMPL_NONE
+#elif GHC_MQTT_IMPL == GHC_IMPL_NONE
 
 class HubMQTT {
    public:
@@ -60,15 +60,15 @@ class HubMQTT {
 #endif
 
 
-#if GH_MQTT_IMPL == GH_IMPL_ASYNC
+#if GHC_MQTT_IMPL == GHC_IMPL_ASYNC
 # include "async/http.h"
 # include "async/ws.h"
-#elif GH_MQTT_IMPL == GH_IMPL_SYNC
+#elif GHC_MQTT_IMPL == GHC_IMPL_SYNC
 # include "sync/http.h"
 # include "sync/ws.h"
-#elif GH_MQTT_IMPL == GH_IMPL_NATIVE
+#elif GHC_MQTT_IMPL == GHC_IMPL_NATIVE
 # include "esp_idf/http_ws.h"
-#elif GH_MQTT_IMPL == GH_IMPL_NONE
+#elif GHC_MQTT_IMPL == GHC_IMPL_NONE
 
 class HubHTTP {};
 class HubWS {};
@@ -169,7 +169,7 @@ public:
         autoUpd_f = f;
     }
 
-#if GH_MQTT_IMPL != GH_IMPL_NONE
+#if GHC_MQTT_IMPL != GHC_IMPL_NONE
 
     /// автоматически отправлять новое состояние на get-топик при изменении через set (умолч. false)
     void sendGetAuto(bool v) {
@@ -189,15 +189,15 @@ public:
     /// true - интерфейс устройства сейчас открыт на сайте или в приложении
     bool focused() {
         if (!running_f) return 0;
-        for (uint8_t i = 0; i < GH_CONN_AMOUNT; i++) {
+        for (uint8_t i = 0; i < gyverhub::ConnectionTypeCount; i++) {
             if (focus_arr[i]) return 1;
         }
         return 0;
     }
 
     /// проверить фокус по указанному типу связи
-    bool focused(GHconn_t from) {
-        return focus_arr[from];
+    bool focused(gyverhub::ConnectionType from) {
+        return focus_arr[static_cast<size_t>(from)];
     }
 
 
@@ -226,14 +226,14 @@ public:
 #if GHI_ESP_BUILD
 
     /// подключить функцию-обработчик перезагрузки. Будет вызвана перед перезагрузкой
-    void onReboot(void (*handler)(GHreason_t)) {
+    void onReboot(void (*handler)(gyverhub::RebootReason)) {
         reboot_cb = handler;
     }
 
 #endif
 
     /// подключить обработчик запроса клиента
-    void onRequest(bool (*handler)(const char* name, const char* value, GHclient nclient, GHcommand cmd)) {
+    void onRequest(bool (*handler)(const char* name, const char* value, GHclient nclient, gyverhub::Command cmd)) {
         req_cb = handler;
     }
 
@@ -252,7 +252,7 @@ public:
 #endif
 
 
-#if GH_MQTT_IMPL != GH_IMPL_NONE
+#if GHC_MQTT_IMPL != GHC_IMPL_NONE
 
     // ========================== ON/OFF ==========================
 
@@ -411,14 +411,11 @@ public:
         gyverhub::Json answ;
         _updateBegin(answ);
 
-        char* str = (char*)name.c_str();
-        char* p = str;
-        GH_splitter(NULL);
-        while ((p = GH_splitter(str)) != NULL) {
-            answ.key(p);
+        for (gyverhub::Splitter s{(char*)name.c_str()}; s.next(); ) {
+            answ.key(s.get());
             answ += '\"';
             answ.reserve(answ.length() + 64);
-            gyverhub::Builder::buildRead(build_cb, &answ, p);
+            gyverhub::Builder::buildRead(build_cb, &answ, s.get());
             answ += F("\",");
         }
         answ[answ.length() - 1] = '}';
@@ -438,7 +435,7 @@ public:
 
     // ======================== SEND GET =========================
 
-#if GH_MQTT_IMPL != GH_IMPL_NONE
+#if GHC_MQTT_IMPL != GHC_IMPL_NONE
 
     // отправить имя-значение на get-топик (MQTT)
     void sendGet(GHI_UNUSED const String& name, GHI_UNUSED const String& value) {
@@ -455,12 +452,9 @@ public:
     void sendGet(GHI_UNUSED const String& name) {
         if (!running_f || !build_cb) return;
 
-        char* str = (char*)name.c_str();
-        char* p = str;
-        GH_splitter(NULL);
-        while ((p = GH_splitter(str)) != NULL) {
+        for (gyverhub::Splitter s{(char*)name.c_str()}; s.next(); ) {
             gyverhub::Json value;
-            if (gyverhub::Builder::buildRead(build_cb, &value, p)) sendGet(p, value);
+            if (gyverhub::Builder::buildRead(build_cb, &value, s.get())) sendGet(s.get(), value);
         }
     }
 
@@ -469,7 +463,7 @@ public:
     // ========================== PARSER ==========================
 
     // парсить строку вида PREFIX/ID/HUB_ID/CMD/NAME=VALUE
-    void parse(char* url, GHconn_t from) {
+    void parse(char* url, gyverhub::ConnectionType from) {
         if (!running_f) return;
         char* eq = strchr(url, '=');
         char val[1] = "";
@@ -479,86 +473,84 @@ public:
     }
 
     // парсить строку вида PREFIX/ID/HUB_ID/CMD/NAME с отдельным value
-    void parse(char* url, const char* value, GHconn_t from) {
+    void parse(char* url, const char* value, gyverhub::ConnectionType from) {
         if (!running_f) return;
 
 #if !GHI_MOD_ENABLED(GH_MOD_SERIAL)
-        if (from == GH_SERIAL) return;
+        if (from == ConnectionType::STREAM) return;
 #endif
 #if !GHI_MOD_ENABLED(GH_MOD_BT)
-        if (from == GH_BT) return;
+        if (from == ConnectionType::BLUETOOTH) return;
 #endif
 #if !GHI_MOD_ENABLED(GH_MOD_WS)
-        if (from == GH_WS) return;
+        if (from == ConnectionType::WEBSOCKET) return;
 #endif
 #if !GHI_MOD_ENABLED(GH_MOD_HTTP)
-        if (from == GH_HTTP) return;
+        if (from == ConnectionType::HTTP) return;
 #endif
 #if !GHI_MOD_ENABLED(GH_MOD_MQTT)
-        if (from == GH_MQTT) return;
+        if (from == ConnectionType::MQTT) return;
 #endif
 
-#if GHI_ESP_BUILD && !defined(GH_NO_FS) && !defined(GH_NO_OTA) && !defined(GH_NO_OTA_URL)
+#if GHI_ESP_BUILD && GHI_MOD_ENABLED(GH_MOD_OTA_URL)
         if (ota_url_f) return;
 #endif
 
         if (!strcmp(url, prefix)) {  // == prefix
-            GHI_DEBUG_LOG("Event: GH_DISCOVER_ALL from %d", from);
+            GHI_DEBUG_LOG("Event: DISCOVER_ALL from %d", from);
             GHclient client(from, value);
             client_ptr = &client;
             answerDiscover();
             return;
         }
 
-        GHparser<5> p(url);
-        if (strcmp(p.str[0], prefix)) return;  // wrong prefix
-        if (strcmp(p.str[1], id)) return;      // wrong id
+        gyverhub::Parser<5> p(url);
+        if (strcmp(p.get(0), prefix)) return;  // wrong prefix
+        if (strcmp(p.get(1), id)) return;      // wrong id
 
-        if (p.size == 2) {
-            GHI_DEBUG_LOG("Event: GH_DISCOVER from %d", from);
+        if (p.length() == 2) {
+            GHI_DEBUG_LOG("Event: DISCOVER from %d", from);
             GHclient client(from, value);
             client_ptr = &client;
             answerDiscover();
             return;
         }
 
-        if (p.size == 3) {
-            GHI_DEBUG_LOG("Event: GH_UNKNOWN from %d (size == 3)", from);
+        if (p.length() == 3) {
+            GHI_DEBUG_LOG("Event: UNKNOWN from %d (size == 3)", from);
             return;
         }
         // p.size >= 4
 
-        const char* cmd = p.str[3];
-        GHcommand cmdn = GH_getCmd(cmd);
-        if (cmdn == GHcommand::UNKNOWN) {
-            GHI_DEBUG_LOG("Event: GH_UNKNOWN from %d (cmdn == -1)", from);
+        gyverhub::Command cmdn = gyverhub::parseCommand(p.get(3));
+        if (cmdn == gyverhub::Command::UNKNOWN) {
+            GHI_DEBUG_LOG("Event: UNKNOWN from %d (cmdn == -1)", from);
             return;
         }
 
-        const char* client_id = p.str[2];
-        const char* name = p.str[4];
-        GHclient client(from, client_id);
+        GHclient client(from, p.get(2));
         client_ptr = &client;
 
+        const char* name = p.get(4);
         if (!_reqHook(name, value, client, cmdn)) {
             answerErr(F("Forbidden"));
             return;
         }
 
-#if GH_MQTT_IMPL != GH_IMPL_NONE && (GHI_MOD_ENABLED(GH_MOD_READ) || GHI_MOD_ENABLED(GH_MOD_SET))
+#if GHC_MQTT_IMPL != GHC_IMPL_NONE && (GHI_MOD_ENABLED(GH_MOD_READ) || GHI_MOD_ENABLED(GH_MOD_SET))
         // MQTT HOOK
-        if (p.size == 4 && from == GH_MQTT && build_cb) {
+        if (p.length() == 4 && from == gyverhub::ConnectionType::MQTT && build_cb) {
 #if GHI_MOD_ENABLED(GH_MOD_READ)
-             if (cmdn == GHcommand::READ) {
-                GHI_DEBUG_LOG("Event: GH_READ_HOOK from %d", from);
+             if (cmdn == gyverhub::Command::READ) {
+                GHI_DEBUG_LOG("Event: READ_HOOK from %d", from);
                 sendGet(name);
                 return;
             }
 #endif
 
 #if GHI_MOD_ENABLED(GH_MOD_SET)
-            if (cmdn == GHcommand::SET) {
-                GHI_DEBUG_LOG("Event: GH_SET_HOOK from %d", from);
+            if (cmdn == gyverhub::Command::SET) {
+                GHI_DEBUG_LOG("Event: SET_HOOK from %d", from);
                 gyverhub::Builder::buildSet(build_cb, name, value, client);
                 if (autoGet_f) sendGet(name, value);
                 if (autoUpd_f) sendUpdate(name, value);
@@ -569,39 +561,39 @@ public:
 #endif
         setFocus(from);
 
-        if (p.size == 4) {
+        if (p.length() == 4) {
             switch (cmdn) {
-                case GHcommand::FOCUS:
-                    GHI_DEBUG_LOG("Event: GH_FOCUS from %d", from);
+                case gyverhub::Command::FOCUS:
+                    GHI_DEBUG_LOG("Event: FOCUS from %d", from);
                     answerUI();
                     return;
 
-                case GHcommand::PING:
-                    GHI_DEBUG_LOG("Event: GH_PING from %d", from);
+                case gyverhub::Command::PING:
+                    GHI_DEBUG_LOG("Event: PING from %d", from);
                     answerType();
                     return;
 
-                case GHcommand::UNFOCUS:
-                    GHI_DEBUG_LOG("Event: GH_UNFOCUS from %d", from);
+                case gyverhub::Command::UNFOCUS:
+                    GHI_DEBUG_LOG("Event: UNFOCUS from %d", from);
                     answerType();
                     clearFocus(from);
                     return;
 #if GHI_MOD_ENABLED(GH_MOD_INFO)
-                case GHcommand::INFO:
-                    GHI_DEBUG_LOG("Event: GH_INFO from %d", from);
+                case gyverhub::Command::INFO:
+                    GHI_DEBUG_LOG("Event: INFO from %d", from);
                     answerInfo();
                     return;
 #endif
 #if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_FSBR)
-                case GHcommand::FSBR:
-                    GHI_DEBUG_LOG("Event: GH_FSBR from %d", from);
+                case gyverhub::Command::FSBR:
+                    GHI_DEBUG_LOG("Event: FSBR from %d", from);
                     if (fs_mounted) answerFsbr();
                     else answerType(F("fs_error"));
                     return;
 #endif
 #if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_FORMAT)
-                case GHcommand::FORMAT:
-                    GHI_DEBUG_LOG("Event: GH_FORMAT from %d", from);
+                case gyverhub::Command::FORMAT:
+                    GHI_DEBUG_LOG("Event: FORMAT from %d", from);
                     GHI_FS.format();
                     GHI_FS.end();
                     fs_mounted = GHI_FS.begin();
@@ -609,14 +601,14 @@ public:
                     return;
 #endif
 #if GHI_ESP_BUILD && GHI_MOD_ENABLED(GH_MOD_REBOOT)
-                case GHcommand::REBOOT:
-                    GHI_DEBUG_LOG("Event: GH_REBOOT from %d", from);
-                    reboot_f = GH_REB_BUTTON;
+                case gyverhub::Command::REBOOT:
+                    GHI_DEBUG_LOG("Event: REBOOT from %d", from);
+                    reboot_f = gyverhub::RebootReason::BUTTON;
                     answerType();
                     return;
 #endif
                 default:
-                    GHI_DEBUG_LOG("Event: GH_UNKNOWN from %d (size == 4, cmdn == %d)", from, (int) cmdn);
+                    GHI_DEBUG_LOG("Event: UNKNOWN from %d (size == 4, cmdn == %d)", from, (int) cmdn);
                     answerDsbl();
                     return;
             }
@@ -625,21 +617,21 @@ public:
         // p.size == 5
 
         switch (cmdn) {
-            case GHcommand::DATA:
-                GHI_DEBUG_LOG("Event: GH_DATA from %d", from);
+            case gyverhub::Command::DATA:
+                GHI_DEBUG_LOG("Event: DATA from %d", from);
                 if (data_cb) data_cb(name, value);
                 answerType();
                 return;
 #if GHI_MOD_ENABLED(GH_MOD_SET)
-            case GHcommand::SET: {
-                GHI_DEBUG_LOG("Event: GH_SET from %d", from);
+            case gyverhub::Command::SET: {
+                GHI_DEBUG_LOG("Event: SET from %d", from);
                 if (!build_cb) {
                     answerType();
                     return;
                 }
                 
                 bool mustRefresh = gyverhub::Builder::buildSet(build_cb, name, value, client);
-#if GH_MQTT_IMPL != GH_IMPL_NONE
+#if GHC_MQTT_IMPL != GHC_IMPL_NONE
                 if (autoGet_f) sendGet(name, value);
 #endif
                 if (autoUpd_f) sendUpdate(name, value);
@@ -648,8 +640,8 @@ public:
                 return;
             }
 #endif
-            case GHcommand::CLI:
-                GHI_DEBUG_LOG("Event: GH_CLI from %d", from);
+            case gyverhub::Command::CLI:
+                GHI_DEBUG_LOG("Event: CLI from %d", from);
                 answerType();
                 if (cli_cb) {
                     String str(value);
@@ -657,71 +649,71 @@ public:
                 }
                 return;
 #if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_DELETE)
-            case GHcommand::DELETE:
-                GHI_DEBUG_LOG("Event: GH_DELETE from %d", from);
+            case gyverhub::Command::DELETE:
+                GHI_DEBUG_LOG("Event: DELETE from %d", from);
                 GHI_FS.remove(name);
                 gyverhub::rmdirRecursive(name);
                 answerFsbr();
                 return;
 #endif
 #if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_RENAME)
-            case GHcommand::RENAME:
-                GHI_DEBUG_LOG("Event: GH_RENAME from %d", from);
+            case gyverhub::Command::RENAME:
+                GHI_DEBUG_LOG("Event: RENAME from %d", from);
                 if (GHI_FS.rename(name, value))
                     answerFsbr();
                 else answerErr(F("Rename failed"));
                 return;
 #endif
 #if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_FETCH)
-            case GHcommand::FETCH: {
+            case gyverhub::Command::FETCH: {
                 if (fetch.isActive()) {
-                    GHI_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (busy)", from);
+                    GHI_DEBUG_LOG("Event: FETCH_ERROR from %d (busy)", from);
                     answerType(F("fetch_err"));
                     return;
                 }
 
                 if (!fetch.open(name)) {
-                    GHI_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (not found)", from);
+                    GHI_DEBUG_LOG("Event: FETCH_ERROR from %d (not found)", from);
                     answerType(F("fetch_err"));
                     return;
                 }
 
-                GHI_DEBUG_LOG("Event: GH_FETCH from %d", from);
+                GHI_DEBUG_LOG("Event: FETCH from %d", from);
                 fs_client = client;
                 fs_tmr.reset();
                 answerType(F("fetch_start"));
                 return;
             }
 
-            case GHcommand::FETCH_CHUNK:
+            case gyverhub::Command::FETCH_CHUNK:
                 if (!fetch.isActive() || fs_client != client) {
-                    GHI_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (closed or wrong clid)", from);
+                    GHI_DEBUG_LOG("Event: FETCH_ERROR from %d (closed or wrong clid)", from);
                     answerType(F("fetch_err"));
                     return;
                 }
 
-                GHI_DEBUG_LOG("Event: GH_FETCH_CHUNK from %d", from);
+                GHI_DEBUG_LOG("Event: FETCH_CHUNK from %d", from);
                 fs_tmr.reset();
                 answerChunk();
-                GHI_DEBUG_LOG("Event: GH_FETCH_FINISH from %d", from);
+                GHI_DEBUG_LOG("Event: FETCH_FINISH from %d", from);
                 fetch.close();
                 return;
 
-            case GHcommand::FETCH_STOP:
+            case gyverhub::Command::FETCH_STOP:
                 if (!fetch.isActive() || fs_client != client) {
-                    GHI_DEBUG_LOG("Event: GH_FETCH_ERROR from %d (closed or wrong clid)", from);
+                    GHI_DEBUG_LOG("Event: FETCH_ERROR from %d (closed or wrong clid)", from);
                     answerType(F("fetch_err"));
                     return;
                 }
 
-                GHI_DEBUG_LOG("Event: GH_FETCH_ABORTED from %d", from);
+                GHI_DEBUG_LOG("Event: FETCH_ABORTED from %d", from);
                 fetch.close();
                 return;
 #endif
 #if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_UPLOAD)
-            case GHcommand::UPLOAD:
+            case gyverhub::Command::UPLOAD:
                 if (fs_upload_file) {
-                    GHI_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (busy)", from);
+                    GHI_DEBUG_LOG("Event: UPLOAD_ERROR from %d (busy)", from);
                     answerType(F("upload_err"));
                     return;
                 }
@@ -729,45 +721,45 @@ public:
                 gyverhub::mkdirRecursive(name);
                 fs_upload_file = GHI_FS.open(name, "w");
                 if (!fs_upload_file) {
-                    GHI_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (not found)", from);
+                    GHI_DEBUG_LOG("Event: UPLOAD_ERROR from %d (not found)", from);
                     answerType(F("upload_err"));
                     return;
                 }
 
-                GHI_DEBUG_LOG("Event: GH_UPLOAD from %d", from);
+                GHI_DEBUG_LOG("Event: UPLOAD from %d", from);
                 fs_upload_client = client;
                 fs_upload_tmr.reset();
 
                 answerType(F("upload_start"));
                 return;
 
-            case GHcommand::UPLOAD_CHUNK: {
+            case gyverhub::Command::UPLOAD_CHUNK: {
                 if (!fs_upload_file || fs_upload_client != client) {
-                    GHI_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (closed or wrong clid)", from);
+                    GHI_DEBUG_LOG("Event: UPLOAD_ERROR from %d (closed or wrong clid)", from);
                     answerType(F("upload_err"));
                     return;
                 }
 
                 bool isLast = strcmp_P(name, PSTR("last")) == 0;
                 if (!isLast && strcmp_P(name, PSTR("next")) != 0) {
-                    GHI_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (invalid name)", from);
+                    GHI_DEBUG_LOG("Event: UPLOAD_ERROR from %d (invalid name)", from);
                     answerType(F("upload_err"));
                     return;
                 }
 
-                GHI_DEBUG_LOG("Event: GH_UPLOAD_CHUNK from %d", from);
+                GHI_DEBUG_LOG("Event: UPLOAD_CHUNK from %d", from);
                 size_t len;
                 uint8_t *data = gyverhub::base64Decode(value, strlen(value), len);
 
                 if (fs_upload_file.write(data, len) != len) {
-                    GHI_DEBUG_LOG("Event: GH_UPLOAD_ERROR from %d (write failed)", from);
+                    GHI_DEBUG_LOG("Event: UPLOAD_ERROR from %d (write failed)", from);
                     fs_upload_file.close();
                     answerType(F("upload_err"));
                     return;
                 }
 
                 if (isLast) {
-                    GHI_DEBUG_LOG("Event: GH_UPLOAD_FINISH from %d", from);
+                    GHI_DEBUG_LOG("Event: UPLOAD_FINISH from %d", from);
                     fs_upload_file.close();
                     answerType(F("upload_end"));
                 } else {
@@ -778,21 +770,21 @@ public:
             }
 #endif
 #if GHI_ESP_BUILD && GHI_MOD_ENABLED(GH_MOD_OTA)
-            case GHcommand::OTA: {
+            case gyverhub::Command::OTA: {
                 if (ota_f) {
-                    GHI_DEBUG_LOG("Event: GH_OTA_ERROR from %d (busy)", from);
+                    GHI_DEBUG_LOG("Event: OTA_ERROR from %d (busy)", from);
                     answerErr(F("Update already running"));
                     return;
                 }
 
                 bool isFlash = strcmp_P(name, PSTR("flash")) == 0;
                 if (!isFlash && strcmp_P(name, PSTR("fs")) != 0) {
-                    GHI_DEBUG_LOG("Event: GH_OTA_ERROR from %d (invalid type)", from);
+                    GHI_DEBUG_LOG("Event: OTA_ERROR from %d (invalid type)", from);
                     answerErr(F("Invalid type"));
                     return;
                 }
 
-                GHI_DEBUG_LOG("Event: GH_OTA from %d", from);
+                GHI_DEBUG_LOG("Event: OTA from %d", from);
                 size_t ota_size;
                 int ota_type;
                 if (isFlash) {
@@ -814,7 +806,7 @@ public:
                 }
 
                 if (!Update.begin(ota_size, ota_type)) {
-                    GHI_DEBUG_LOG("Event: GH_OTA_ERROR from %d (Update.begin failed)", from);
+                    GHI_DEBUG_LOG("Event: OTA_ERROR from %d (Update.begin failed)", from);
                     answerType(F("ota_err"));
                     return;
                 }
@@ -826,25 +818,25 @@ public:
                 return;
             }
 
-            case GHcommand::OTA_CHUNK: {
+            case gyverhub::Command::OTA_CHUNK: {
                 if (!ota_f || ota_client != client) {
-                    GHI_DEBUG_LOG("Event: GH_OTA_ERROR from %d (closed or wrong clid)", from);
+                    GHI_DEBUG_LOG("Event: OTA_ERROR from %d (closed or wrong clid)", from);
                     answerType(F("ota_err"));
                     return;
                 }
 
                 bool isLast = strcmp_P(name, PSTR("last")) == 0;
                 if (!isLast && strcmp_P(name, PSTR("next")) != 0) {
-                    GHI_DEBUG_LOG("Event: GH_OTA_ERROR from %d (invalid name)", from);
+                    GHI_DEBUG_LOG("Event: OTA_ERROR from %d (invalid name)", from);
                     answerType(F("ota_err"));
                     return;
                 }
 
-                GHI_DEBUG_LOG("Event: GH_OTA_CHUNK from %d", from);
+                GHI_DEBUG_LOG("Event: OTA_CHUNK from %d", from);
                 size_t len;
                 uint8_t *data = gyverhub::base64Decode(value, strlen(value), len);
                 if (Update.write(data, len) != len) {
-                    GHI_DEBUG_LOG("Event: GH_OTA_ERROR from %d (Update.write failed)", from);
+                    GHI_DEBUG_LOG("Event: OTA_ERROR from %d (Update.write failed)", from);
                     ota_f = false;
 #ifdef ESP32
                     Update.abort();
@@ -855,13 +847,13 @@ public:
                 }
 
                 if (isLast) {
-                    GHI_DEBUG_LOG("Event: GH_OTA_FINISH from %d", from);
+                    GHI_DEBUG_LOG("Event: OTA_FINISH from %d", from);
                     ota_f = false;
                     if (Update.end(true)) {
-                        reboot_f = GH_REB_OTA;
+                        reboot_f = gyverhub::RebootReason::OTA;
                         answerType(F("ota_end"));
                     } else {
-                        GHI_DEBUG_LOG("Event: GH_OTA_ERROR from %d (Update.end failed)", from);
+                        GHI_DEBUG_LOG("Event: OTA_ERROR from %d (Update.end failed)", from);
                         answerType(F("ota_err"));
                     }
                 } else {
@@ -872,15 +864,15 @@ public:
             }
 #endif
 #if GHI_ESP_BUILD && GHI_MOD_ENABLED(GH_MOD_OTA_URL)
-            case GHcommand::OTA_URL: {
+            case gyverhub::Command::OTA_URL: {
                 bool isFlash = strcmp_P(name, PSTR("flash")) == 0;
                 if (!isFlash && strcmp_P(name, PSTR("fs")) != 0) {
-                    GHI_DEBUG_LOG("Event: GH_OTA_URL from %d (invalid type)", from);
+                    GHI_DEBUG_LOG("Event: OTA_URL from %d (invalid type)", from);
                     answerErr(F("Invalid type"));
                     return;
                 }
 
-                GHI_DEBUG_LOG("Event: GH_OTA_URL from %d (start)", from);
+                GHI_DEBUG_LOG("Event: OTA_URL from %d (start)", from);
                 answerType();
 
                 bool ok = 0;
@@ -900,11 +892,11 @@ public:
 #endif
                 ota_url_f = 0;
                 if (ok) {
-                    GHI_DEBUG_LOG("Event: GH_OTA_URL from %d (finished)", from);
-                    reboot_f = GH_REB_OTA_URL;
+                    GHI_DEBUG_LOG("Event: OTA_URL from %d (finished)", from);
+                    reboot_f = gyverhub::RebootReason::OTA_URL;
                     answerType(F("ota_url_ok"));
                 } else {
-                    GHI_DEBUG_LOG("Event: GH_OTA_URL from %d (failed)", from);
+                    GHI_DEBUG_LOG("Event: OTA_URL from %d (failed)", from);
                     answerType(F("ota_url_err"));
                 }
 
@@ -912,7 +904,7 @@ public:
             }
 #endif
             default:
-                GHI_DEBUG_LOG("Event: GH_UNKNOWN from %d (size == 5, cmdn == %d)", from, (int) cmdn);
+                GHI_DEBUG_LOG("Event: UNKNOWN from %d (size == 5, cmdn == %d)", from, (int) cmdn);
                 answerDsbl();
                 return;
         }
@@ -924,11 +916,11 @@ public:
     // запустить
     void begin() {
         GHI_DEBUG_LOG("called");
-#if GH_HTTP_IMPL != GH_IMPL_NONE
+#if GHC_HTTP_IMPL != GHC_IMPL_NONE
         beginWS();
         beginHTTP();
 #endif
-#if GH_MQTT_IMPL != GH_IMPL_NONE
+#if GHC_MQTT_IMPL != GHC_IMPL_NONE
         beginMQTT();
 #endif
 
@@ -945,11 +937,11 @@ public:
     // остановить
     void end() {
         GHI_DEBUG_LOG("called");
-#if GH_HTTP_IMPL != GH_IMPL_NONE
+#if GHC_HTTP_IMPL != GHC_IMPL_NONE
         endWS();
         endHTTP();
 #endif
-#if GH_MQTT_IMPL != GH_IMPL_NONE
+#if GHC_MQTT_IMPL != GHC_IMPL_NONE
         endMQTT();
 #endif
         running_f = false;
@@ -963,25 +955,25 @@ public:
 
         if ((uint16_t)((uint16_t)millis() - focus_tmr) >= 1000) {
             focus_tmr = millis();
-            for (uint8_t i = 0; i < GH_CONN_AMOUNT; i++) {
+            for (uint8_t i = 0; i < gyverhub::ConnectionTypeCount; i++) {
                 if (focus_arr[i]) focus_arr[i]--;
             }
         }
 
-#ifndef GH_NO_STREAM
+#if GHI_MOD_ENABLED(GH_MOD_SERIAL)
         tickStream();
 #endif
-#if GH_HTTP_IMPL != GH_IMPL_NONE && GH_HTTP_IMPL != GH_IMPL_NATIVE
+#if GHC_HTTP_IMPL != GHC_IMPL_NONE && GHC_HTTP_IMPL != GHC_IMPL_NATIVE
         tickWS();
         tickHTTP();
 #endif
-#if GH_MQTT_IMPL != GH_IMPL_NONE && GH_MQTT_IMPL != GH_IMPL_NATIVE
+#if GHC_MQTT_IMPL != GHC_IMPL_NONE && GHC_MQTT_IMPL != GHC_IMPL_NATIVE
         tickMQTT();
 #endif
 
 #if GHI_ESP_BUILD && GHI_MOD_ENABLED(GH_MOD_OTA)
         if (ota_f && ota_tmr.isTimedOut(GHC_CONN_TOUT * 1000ul)) {
-            GHI_DEBUG_LOG("Event: GH_OTA_ABORTED from %d", ota_client.from);
+            GHI_DEBUG_LOG("Event: OTA_ABORTED from %d", ota_client.from);
 #ifdef ESP32
             Update.abort();
 #else
@@ -992,18 +984,18 @@ public:
 #endif
 #if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_UPLOAD)
         if (fs_upload_file && fs_upload_tmr.isTimedOut(GHC_CONN_TOUT * 1000ul)) {
-            GHI_DEBUG_LOG("Event: GH_UPLOAD_ABORTED from %d", fs_upload_client.from);
+            GHI_DEBUG_LOG("Event: UPLOAD_ABORTED from %d", fs_upload_client.from);
             fs_upload_file.close();
         }
 #endif
 #if GHC_FS != GHC_FS_NONE && GHI_MOD_ENABLED(GH_MOD_FETCH)
         if (fetch.isActive() && fs_tmr.isTimedOut(GHC_CONN_TOUT * 1000ul)) {
-            GHI_DEBUG_LOG("Event: GH_FETCH_ABORTED from %d", fs_client.from);
+            GHI_DEBUG_LOG("Event: FETCH_ABORTED from %d", fs_client.from);
             fetch.close();
         }
 #endif
 #if GHI_ESP_BUILD
-        if (reboot_f) {
+        if (reboot_f != gyverhub::RebootReason::NO_REBOOT) {
             if (reboot_cb) reboot_cb(reboot_f);
             delay(2000);
             ESP.restart();
@@ -1018,7 +1010,7 @@ public:
    private:
     void _rebootOTA() {
 #if GHI_ESP_BUILD
-        reboot_f = GH_REB_OTA;
+        reboot_f = gyverhub::RebootReason::OTA;
 #endif
     }
     const char* getPrefix() {
@@ -1028,7 +1020,7 @@ public:
         return id;
     }
 
-    bool _reqHook(const char* name, const char* value, GHclient client, GHcommand event) {
+    bool _reqHook(const char* name, const char* value, GHclient client, gyverhub::Command event) {
         if (req_cb && !req_cb(name, value, client, event)) return 0;  // forbidden
         return 1;
     }
@@ -1076,7 +1068,7 @@ public:
         bool chunked = buf_size;
 
 #if GHI_ESP_BUILD
-        if (client_ptr->from == GH_WS || client_ptr->from == GH_MQTT) chunked = false;
+        if (client_ptr->from == gyverhub::ConnectionType::WEBSOCKET || client_ptr->from == gyverhub::ConnectionType::MQTT) chunked = false;
 #endif
 
         gyverhub::Json answ;
@@ -1198,27 +1190,27 @@ public:
     void _answer(const String& answ, bool close = true) {
         if (!client_ptr) return;
         switch (client_ptr->from) {
-#if GH_HTTP_IMPL != GH_IMPL_NONE
-            case GH_WS:
+#if GHC_HTTP_IMPL != GHC_IMPL_NONE
+            case gyverhub::ConnectionType::WEBSOCKET:
                 answerWS(answ);
                 break;
 #endif
-#if GH_MQTT_IMPL != GH_IMPL_NONE
-            case GH_MQTT:
+#if GHC_MQTT_IMPL != GHC_IMPL_NONE
+            case gyverhub::ConnectionType::MQTT:
                 answerMQTT(answ, client_ptr->id);
                 break;
 #endif
-#if GH_HTTP_IMPL != GH_IMPL_NONE
-            case GH_HTTP:
+#if GHC_HTTP_IMPL != GHC_IMPL_NONE
+            case gyverhub::ConnectionType::HTTP:
                 answerHTTP(answ);
                 break;
 #endif
-#ifndef GH_NO_STREAM
-            case GH_SERIAL:
+#if GHI_MOD_ENABLED(GH_MOD_SERIAL)
+            case gyverhub::ConnectionType::STREAM:
                 sendStream(answ);
                 break;
 #endif
-            case GH_MANUAL:
+            case gyverhub::ConnectionType::MANUAL:
                 if (manual_cb) manual_cb(answ, false);
                 break;
 
@@ -1233,24 +1225,24 @@ public:
         client_ptr = nullptr;
         if (manual_cb) manual_cb(answ, broadcast);
 
-#ifndef GH_NO_STREAM
-        if (focus_arr[GH_SERIAL]) sendStream(answ);
+#if GHI_MOD_ENABLED(GH_MOD_SERIAL)
+        if (focused(gyverhub::ConnectionType::STREAM)) sendStream(answ);
 #endif
 
-#if GH_HTTP_IMPL != GH_IMPL_NONE
-        if (focus_arr[GH_WS]) sendWS(answ);
+#if GHC_HTTP_IMPL != GHC_IMPL_NONE
+        if (focused(gyverhub::ConnectionType::WEBSOCKET)) sendWS(answ);
 #endif
-#if GH_MQTT_IMPL != GH_IMPL_NONE
-        if (focus_arr[GH_MQTT] || broadcast) sendMQTT(answ);
+#if GHC_MQTT_IMPL != GHC_IMPL_NONE
+        if (focused(gyverhub::ConnectionType::MQTT) || broadcast) sendMQTT(answ);
 #endif
     }
 
     // ========================== MISC ==========================
-    void setFocus(GHconn_t from) {
-        focus_arr[from] = GHC_CONN_TOUT;
+    void setFocus(gyverhub::ConnectionType from) {
+        focus_arr[static_cast<size_t>(from)] = GHC_CONN_TOUT;
     }
-    void clearFocus(GHconn_t from) {
-        focus_arr[from] = 0;
+    void clearFocus(gyverhub::ConnectionType from) {
+        focus_arr[static_cast<size_t>(from)] = 0;
         client_ptr = nullptr;
     }
 
@@ -1264,7 +1256,7 @@ public:
 
     void (*data_cb)(const char* name, const char* value) = nullptr;
     gyverhub::BuildCallback build_cb = nullptr;
-    bool (*req_cb)(const char* name, const char* value, GHclient nclient, GHcommand cmd) = nullptr;
+    bool (*req_cb)(const char* name, const char* value, GHclient nclient, gyverhub::Command cmd) = nullptr;
     gyverhub::InfoCallback info_cb = nullptr;
     void (*cli_cb)(String& str) = nullptr;
     void (*manual_cb)(const String& s, bool broadcast) = nullptr;
@@ -1275,15 +1267,15 @@ public:
     uint16_t buf_size = 0;
 
     uint16_t focus_tmr = 0;
-    int8_t focus_arr[GH_CONN_AMOUNT] = {};
+    int8_t focus_arr[gyverhub::ConnectionTypeCount] = {};
     bool autoUpd_f = true;
 
 #if GHI_ESP_BUILD
-    void (*reboot_cb)(GHreason_t r) = nullptr;
-#if GH_MQTT_IMPL != GH_IMPL_NONE
+    void (*reboot_cb)(gyverhub::RebootReason r) = nullptr;
+#if GHC_MQTT_IMPL != GHC_IMPL_NONE
     bool autoGet_f = 0;
 #endif
-    GHreason_t reboot_f = GH_REB_NONE;
+    gyverhub::RebootReason reboot_f = gyverhub::RebootReason::NO_REBOOT;
 
 #if GHI_MOD_ENABLED(GH_MOD_OTA_URL)
     bool ota_url_f = 0;

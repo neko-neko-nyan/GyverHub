@@ -1,9 +1,7 @@
 #pragma once
-#include "macro.hpp"
 #include "hub/client.h"
 #include "utils2/mime.h"
 #include "utils2/files.h"
-#include "utils/stats.h"
 
 
 #ifdef ESP8266
@@ -46,7 +44,7 @@ class HubHTTP {
             // command uri
             if (server.uri().startsWith(F("/hub/"))) {
                 handled = false;
-                parse(((char *)server.uri().c_str()) + 5, GH_HTTP);  // +5 == "/hub/"
+                parse(((char *)server.uri().c_str()) + 5, gyverhub::ConnectionType::HTTP);  // +5 == "/hub/"
                 if (handled) return;
             }
 
@@ -103,7 +101,7 @@ class HubHTTP {
                         server.send(503);
                         return;
                     }
-                    if (!_reqHook(path.c_str(), "", GHclient(GH_HTTP, server.arg(F("client_id")).c_str()), GHcommand::HTTP_UPLOAD)) {
+                    if (!_reqHook(path.c_str(), "", GHclient(gyverhub::ConnectionType::HTTP, server.arg(F("client_id")).c_str()), gyverhub::Command::HTTP_UPLOAD)) {
                         server.send(503);
                         return;
                     }
@@ -137,7 +135,7 @@ class HubHTTP {
                         server.send(503);
                         return;
                     }
-                    if (!_reqHook("", "", GHclient(GH_HTTP, server.arg(F("client_id")).c_str()), GHcommand::HTTP_OTA)) {
+                    if (!_reqHook("", "", GHclient(gyverhub::ConnectionType::HTTP, server.arg(F("client_id")).c_str()), gyverhub::Command::HTTP_OTA)) {
                         server.send(503);
                         return;
                     }
@@ -246,9 +244,9 @@ class HubHTTP {
 #endif
     }
 
-    virtual void parse(char *url, GHconn_t from) = 0;
+    virtual void parse(char *url, gyverhub::ConnectionType from) = 0;
     virtual void _rebootOTA() = 0;
-    virtual bool _reqHook(const char *name, const char *value, GHclient client, GHcommand cmd) = 0;
+    virtual bool _reqHook(const char *name, const char *value, GHclient client, gyverhub::Command cmd) = 0;
     virtual bool _checkModule(uint32_t mod) = 0;
 
 #if GHC_FS != GHC_FS_NONE
@@ -272,7 +270,7 @@ class HubHTTP {
             server.send(403);
             return 1;
         }
-        if (!_reqHook(path.c_str(), "", GHclient(GH_HTTP, server.arg(F("client_id")).c_str()), GHcommand::HTTP_FETCH)) {
+        if (!_reqHook(path.c_str(), "", GHclient(gyverhub::ConnectionType::HTTP, server.arg(F("client_id")).c_str()), gyverhub::Command::HTTP_FETCH)) {
             server.send(403);
             return 1;
         }

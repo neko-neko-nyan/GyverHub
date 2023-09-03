@@ -1,6 +1,6 @@
 #pragma once
 
-#include "macro.hpp"
+#include "hub/types.h"
 
 #ifndef ESP32
 #error "Native HTTP only available for ESP32"
@@ -66,7 +66,7 @@ private:
         if (ws_pkt.type == HTTPD_WS_TYPE_TEXT) {
             // clientID = client->id();
             ESP_LOGI("ws", "Processing data ");
-            parse((char*)ws_pkt.payload, GH_WS);
+            parse((char*)ws_pkt.payload, gyverhub::ConnectionType::WEBSOCKET);
         }
 
         free(buf);
@@ -94,7 +94,7 @@ private:
     }
 
 protected:
-    virtual void parse(char* url, GHconn_t from) = 0;
+    virtual void parse(char* url, gyverhub::ConnectionType from) = 0;
 
     void beginWS() {
         httpd_config_t config = HTTPD_DEFAULT_CONFIG();

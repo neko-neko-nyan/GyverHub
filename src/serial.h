@@ -1,9 +1,8 @@
 #pragma once
-#include "config.hpp"
-#include "utils/stats.h"
+#include "hub/types.h"
 
 
-#ifdef GH_NO_STREAM
+#if !GHI_MOD_ENABLED(GH_MOD_SERIAL)
 class HubStream {};
 #else
 
@@ -18,7 +17,7 @@ class HubStream {
     void tickStream() {
         if (stream && stream->available()) {
             String str = stream->readStringUntil('\0');
-            parse((char*)str.c_str(), GH_SERIAL);
+            parse((char*)str.c_str(), gyverhub::ConnectionType::STREAM);
         }
     }
 
@@ -26,7 +25,7 @@ class HubStream {
         if (stream) stream->print(answ);
     }
 
-    virtual void parse(char* url, GHconn_t from) = 0;
+    virtual void parse(char* url, gyverhub::ConnectionType from) = 0;
 
     // ============ PRIVATE =============
    private:
