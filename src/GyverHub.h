@@ -999,8 +999,6 @@ public:
         answ.itemString(F("type"), F("info"));
 
         gyverhub::InfoBuilder::build(info_cb, answ, version);
-
-        answ.end();
         _answer(answ);
     }
 

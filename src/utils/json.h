@@ -14,7 +14,11 @@ namespace gyverhub {
         }
 
         void end() {
-            this->concat(F("}\n"));
+            size_t last = this->length() - 1;
+            if (this->charAt(last) == ',') {
+                this->setCharAt(last, '}');
+                this->concat('\n');
+            } else this->concat(F("}\n"));
         }
 
         void appendStringRaw(FSTR data) {
