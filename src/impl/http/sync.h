@@ -79,7 +79,7 @@ class HubHTTP {
                 if (f) server.streamFile(f, F("text/html"));
                 else server.send(404);
 #else
-                server.send_P(200, "text/html", (PGM_P)gyverhub::portal::index_start, (size_t)(gyverhub::portal::index_end - gyverhub::portal::index_start));
+                server.send_P(200, "text/html", (PGM_P)gyverhub::portal::index, gyverhub::portal::index_size);
 #endif
                 return;
             }
@@ -213,17 +213,17 @@ class HubHTTP {
         server.on("/", [this]() {
             gzip_h();
             cache_h();
-            server.send_P(200, "text/html", (PGM_P)gyverhub::portal::index_start, (size_t)(gyverhub::portal::index_end - gyverhub::portal::index_start));
+            server.send_P(200, "text/html", (PGM_P)gyverhub::portal::index, gyverhub::portal::index_size);
         });
         server.on("/script.js", [this]() {
             gzip_h();
             cache_h();
-            server.send_P(200, "text/javascript", (PGM_P)gyverhub::portal::script_start, (size_t)(gyverhub::portal::script_end - gyverhub::portal::script_start));
+            server.send_P(200, "text/javascript", (PGM_P)gyverhub::portal::script, gyverhub::portal::script_size);
         });
         server.on("/style.css", [this]() {
             gzip_h();
             cache_h();
-            server.send_P(200, "text/css", (PGM_P)gyverhub::portal::style_start, (size_t)(gyverhub::portal::style_end - gyverhub::portal::style_start));
+            server.send_P(200, "text/css", (PGM_P)gyverhub::portal::style, gyverhub::portal::style_size);
         });
 #endif
 

@@ -379,9 +379,9 @@ protected:
         GH__SETH(HTTP_GET, "/style.css", HubHTTP::handlerSendFile, "/hub/style.css.gz");
 #elif GHI_MOD_ENABLED(GH_MOD_PORTAL)
         GH__SETH(HTTP_GET, "/favicon.svg", HubHTTP::handlerSendString, "");
-        GH__SETH(HTTP_GET, "/", HubHTTP::handlerSendBinData, new String(gyverhub::portal::index_start, gyverhub::portal::index_end - gyverhub::portal::index_start));
-        GH__SETH(HTTP_GET, "/script.js", HubHTTP::handlerSendBinData, new String(gyverhub::portal::script_start, gyverhub::portal::script_end - gyverhub::portal::script_start));
-        GH__SETH(HTTP_GET, "/style.css", HubHTTP::handlerSendBinData, new String(gyverhub::portal::style_start, gyverhub::portal::style_end - gyverhub::portal::style_start));
+        GH__SETH(HTTP_GET, "/", HubHTTP::handlerSendBinData, new String(gyverhub::portal::index, gyverhub::portal::index_size));
+        GH__SETH(HTTP_GET, "/script.js", HubHTTP::handlerSendBinData, new String(gyverhub::portal::script, gyverhub::portal::script_size));
+        GH__SETH(HTTP_GET, "/style.css", HubHTTP::handlerSendBinData, new String(gyverhub::portal::style, gyverhub::portal::style_size));
 #endif
 
 

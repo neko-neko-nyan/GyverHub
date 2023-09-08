@@ -176,19 +176,19 @@ class HubHTTP {
             request->send(response);
         });
         server.on("/", HTTP_GET, [this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/html", gyverhub::portal::index_start, gyverhub::portal::index_end - gyverhub::portal::index_start);
+            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/html", gyverhub::portal::index, gyverhub::portal::index_size);
             gzip_h(response);
             cache_h(response);
             request->send(response);
         });
         server.on("/script.js", HTTP_GET, [this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/javascript", gyverhub::portal::script_start, gyverhub::portal::script_end - gyverhub::portal::script_start);
+            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/javascript", gyverhub::portal::script, gyverhub::portal::script_size);
             gzip_h(response);
             cache_h(response);
             request->send(response);
         });
         server.on("/style.css", HTTP_GET, [this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/css", gyverhub::portal::style_start, gyverhub::portal::style_end - gyverhub::portal::style_start);
+            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/css", gyverhub::portal::style, gyverhub::portal::style_size);
             gzip_h(response);
             cache_h(response);
             request->send(response);
@@ -209,7 +209,7 @@ class HubHTTP {
         });
 #else
         server.onNotFound([this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/html", gyverhub::portal::index_start, gyverhub::portal::index_end - gyverhub::portal::index_start);
+            AsyncWebServerResponse* response = request->beginResponse_P(200, "text/html", gyverhub::portal::index, gyverhub::portal::index_size);
             gzip_h(response);
             request->send(response);
         });
