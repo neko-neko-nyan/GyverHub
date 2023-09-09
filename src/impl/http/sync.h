@@ -60,7 +60,7 @@ class HubHTTP {
             }
 
 // fetch file from GHC_PUBLIC_PATH
-#if !defined(GH_NO_HTTP_PUBLIC) && !defined(GH_NO_FS)
+#if !defined(GH_NO_HTTP_PUBLIC) && GHC_FS != GHC_FS_NONE
             else if (server.uri().indexOf('.') > 0) {
                 String path(GHC_PUBLIC_PATH);
                 path += server.uri();
@@ -86,7 +86,7 @@ class HubHTTP {
         });  // onNotFound
 
 // fetch /hub/fetch?path=...
-#if !defined(GH_NO_HTTP_FETCH) && !defined(GH_NO_FS)
+#if !defined(GH_NO_HTTP_FETCH) && GHC_FS != GHC_FS_NONE
         server.on("/hub/fetch", HTTP_GET, [this]() {
             String path = server.arg(F("path"));
             if (path.length() && _handleFetch(path)) return;
@@ -95,7 +95,7 @@ class HubHTTP {
 #endif
 
 // upload /hub/upload?path=...
-#if !defined(GH_NO_HTTP_UPLOAD) && !defined(GH_NO_FS)
+#if !defined(GH_NO_HTTP_UPLOAD) && GHC_FS != GHC_FS_NONE
         server.on(
             "/hub/upload", HTTP_POST, [this]() { server.send(200); }, [this]() {
                 HTTPUpload& upload = server.upload();
@@ -103,10 +103,6 @@ class HubHTTP {
                     String path = server.arg(F("path"));
                     if (!path.length()) {
                         server.send(500);
-                        return;
-                    }
-                    if (!_checkModule(GH_MOD_UPLOAD)) {
-                        server.send(503);
                         return;
                     }
                     if (!_reqHook(path.c_str(), "", GHclient(gyverhub::ConnectionType::HTTP, server.arg(F("client_id")).c_str()), gyverhub::Command::HTTP_UPLOAD)) {
@@ -130,7 +126,7 @@ class HubHTTP {
 #endif
 
 // upload /hub/ota?type=...
-#if !defined(GH_NO_HTTP_OTA) && !defined(GH_NO_FS)
+#if !defined(GH_NO_HTTP_OTA) && GHC_FS != GHC_FS_NONE
         server.on(
             "/hub/ota", HTTP_POST, [this]() {
         server.sendHeader(F("Connection"), F("close"));
@@ -139,10 +135,6 @@ class HubHTTP {
             [this]() {
                 HTTPUpload &upload = server.upload();
                 if (upload.status == UPLOAD_FILE_START) {
-                    if (!_checkModule(GH_MOD_OTA)) {
-                        server.send(503);
-                        return;
-                    }
                     if (!_reqHook("", "", GHclient(gyverhub::ConnectionType::HTTP, server.arg(F("client_id")).c_str()), gyverhub::Command::HTTP_OTA)) {
                         server.send(503);
                         return;
@@ -253,7 +245,6 @@ class HubHTTP {
     virtual void parse(char *url, gyverhub::ConnectionType from) = 0;
     virtual void _rebootOTA() = 0;
     virtual bool _reqHook(const char *name, const char *value, GHclient client, gyverhub::Command cmd) = 0;
-    virtual bool _checkModule(uint32_t mod) = 0;
 
 #if GHC_FS != GHC_FS_NONE
     virtual void _fetchStartHook(String &path, File **file, const uint8_t **bytes, uint32_t *size, bool *pgm) = 0;
@@ -270,12 +261,8 @@ class HubHTTP {
         server.sendHeader(F("Cache-Control"), F(GHC_PORTAL_CACHE));
     }
 
-#if !defined(GH_NO_HTTP_FETCH) && !defined(GH_NO_FS)
+#if !defined(GH_NO_HTTP_FETCH) && GHC_FS != GHC_FS_NONE
     bool _handleFetch(String &path) {
-        if (!_checkModule(GH_MOD_FETCH)) {
-            server.send(403);
-            return 1;
-        }
         if (!_reqHook(path.c_str(), "", GHclient(gyverhub::ConnectionType::HTTP, server.arg(F("client_id")).c_str()), gyverhub::Command::HTTP_FETCH)) {
             server.send(403);
             return 1;

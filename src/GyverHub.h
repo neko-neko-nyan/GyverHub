@@ -976,9 +976,6 @@ public:
         if (req_cb && !req_cb(name, value, client, event)) return 0;  // forbidden
         return 1;
     }
-    bool _checkModule(uint32_t mod) {
-        return GHI_MOD_ENABLED(mod);
-    }
 
 #if GHC_FS != GHC_FS_NONE
     void _fetchStartHook(String& path, File** file, const uint8_t** bytes, uint32_t* size, bool* pgm) {
