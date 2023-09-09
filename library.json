@@ -21,6 +21,30 @@
     "platforms": ["espressif32", "espressif8266", "atmelavr"],
     "headers": ["GyverHub.h"],
     "dependencies": [
-        {"name": "LittleFS"}
+        {"name": "LittleFS"},
+        {
+            "name": "AsyncMqttClient-esphome",
+            "owner": "OttoWinter",
+            "platforms": ["espressif32", "espressif8266"],
+            "frameworks": ["arduino"]
+        },
+        {
+            "name": "ESPAsyncWebServer-esphome",
+            "version": "https://github.com/esphome/ESPAsyncWebServer.git",
+            "platforms": ["espressif32", "espressif8266"],
+            "frameworks": ["arduino"]
+        },
+        {
+            "name": "PubSubClient",
+            "owner": "knolleary",
+            "platforms": ["espressif32", "espressif8266"],
+            "frameworks": ["arduino"]
+        },
+        {
+            "name": "arduinoWebSockets",
+            "version": "https://github.com/Links2004/arduinoWebSockets.git",
+            "platforms": ["espressif32", "espressif8266"],
+            "frameworks": ["arduino"]
+        }
     ]
 }
