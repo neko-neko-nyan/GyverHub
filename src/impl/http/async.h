@@ -21,7 +21,7 @@
 #endif
 #endif
 
-#if GHI_MOD_ENABLED(GH_MOD_DNS)
+#if GHC_DNS_SERVER
 #include <DNSServer.h>
 #endif
 
@@ -38,8 +38,6 @@
 #ifdef GH_NO_HTTP_OTA
 #define GH_HTTP_OTA "0"
 #endif
-
-#define GH__ENABLE_DNS ((GHI_MOD_ENABLED(GH_MOD_PORTAL) || (GHI_MOD_ENABLED(GH_MOD_FILE_PORTAL) && GHC_FS != GHC_FS_NONE)) && GHI_MOD_ENABLED(GH_MOD_DNS))
 
 class HubHTTP {
     // ============ PUBLIC =============
@@ -147,11 +145,7 @@ class HubHTTP {
 #endif
 #endif
 
-#if GHI_MOD_ENABLED(GH_MOD_FILE_PORTAL) && GHC_FS != GHC_FS_NONE
-        server.on("/favicon.svg", HTTP_GET, [this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse(200);
-            request->send(response);
-        });
+#if GHC_PORTAL == GHC_PORTAL_FS
         server.on("/", HTTP_GET, [this](AsyncWebServerRequest* request) {
             AsyncWebServerResponse* response = request->beginResponse(GHI_FS, "/hub/index.html.gz", "text/html");
             gzip_h(response);
@@ -170,11 +164,7 @@ class HubHTTP {
             cache_h(response);
             request->send(response);
         });
-#elif GHI_MOD_ENABLED(GH_MOD_PORTAL)
-        server.on("/favicon.svg", HTTP_GET, [this](AsyncWebServerRequest* request) {
-            AsyncWebServerResponse* response = request->beginResponse(200);
-            request->send(response);
-        });
+#elif GHC_PORTAL == GHC_PORTAL_BUILTIN
         server.on("/", HTTP_GET, [this](AsyncWebServerRequest* request) {
             AsyncWebServerResponse* response = request->beginResponse_P(200, "text/html", gyverhub::portal::index, gyverhub::portal::index_size);
             gzip_h(response);
@@ -196,12 +186,12 @@ class HubHTTP {
 #endif
 
 // DNS for captive portal
-#if GH__ENABLE_DNS
-        if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA) {
-            dns_f = 1;
-            dns.start(53, "*", WiFi.softAPIP());
+#if GHC_DNS_SERVER
+        wifi_mode_t mode = WiFi.getMode();
+        if (mode == WIFI_AP || mode == WIFI_AP_STA) {
+            dnsEnabled = dns.start(53, "*", WiFi.softAPIP());
         }
-#if GHI_MOD_ENABLED(GH_MOD_FILE_PORTAL) && GHC_FS != GHC_FS_NONE
+#if GHC_PORTAL == GHC_PORTAL_FS
         server.onNotFound([this](AsyncWebServerRequest* request) {
             AsyncWebServerResponse* response = request->beginResponse(GHI_FS, "/hub/index.html.gz", "text/html");
             gzip_h(response);
@@ -215,7 +205,9 @@ class HubHTTP {
         });
 #endif
 #endif
-        CORS();
+        DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Origin"), F("*"));
+        DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Private-Network"), F("true"));
+        DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("*"));
         server.begin();
     }
 
@@ -225,14 +217,14 @@ class HubHTTP {
 
     void endHTTP() {
         server.end();
-#if GH__ENABLE_DNS
-        if (dns_f) dns.stop();
+#if GHC_DNS_SERVER
+        if (dnsEnabled) dns.stop();
 #endif
     }
 
     void tickHTTP() {
-#if GH__ENABLE_DNS
-        if (dns_f) dns.processNextRequest();
+#if GHC_DNS_SERVER
+        if (dnsEnabled) dns.processNextRequest();
 #endif
     }
 
@@ -241,23 +233,16 @@ class HubHTTP {
 
     // ============ PRIVATE =============
    private:
-    void CORS() {
-        DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Origin"), F("*"));
-        DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Private-Network"), F("true"));
-        DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("*"));
-    }
     void gzip_h(AsyncWebServerResponse* response) {
-        response->addHeader("Content-Encoding", "gzip");
+        response->addHeader(F("Content-Encoding"), F("gzip"));
     }
     void cache_h(AsyncWebServerResponse* response) {
-        response->addHeader(F("Cache-Control"), GHC_PORTAL_CACHE);
+        response->addHeader(F("Cache-Control"), F(GHC_PORTAL_CACHE));
     }
     File file;
 
-#if GH__ENABLE_DNS
-    bool dns_f = false;
+#if GHC_DNS_SERVER
+    bool dnsEnabled = false;
     DNSServer dns;
 #endif
 };
-
-#undef GH__ENABLE_DNS

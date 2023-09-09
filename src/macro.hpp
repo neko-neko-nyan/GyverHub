@@ -78,11 +78,7 @@
 #define GH_MOD_DELETE (1ul << 10)
 #define GH_MOD_RENAME (1ul << 11)
 
-#define GH_MOD_PORTAL (1ul << 16)
-#define GH_MOD_DNS (1ul << 17)
-#define GH_MOD_FILE_PORTAL (1ul << 18)
-
-#define GHC_MODS_ENABLED 0xfffbffff
+#define GHC_MODS_ENABLED 0xffffffff
 #define GHC_MODS_DISABLED ((~GHC_MODS_ENABLED) & 0xFFFF)
 
 // FS
@@ -115,6 +111,22 @@
 #else
 #define GHI_FS !!!
 #endif
+
+// Portal
+
+#define GHC_PORTAL_NONE 0
+#define GHC_PORTAL_BUILTIN 1
+#define GHC_PORTAL_FS 2
+
+#if GHC_PORTAL == GHC_PORTAL_FS && GHC_FS == GHC_FS_NONE
+#error Cannot use GHC_PORTAL_FS with GHC_FS_NONE!
+#endif
+
+#if GHC_PORTAL == GHC_PORTAL_NONE
+#undef GHC_DNS_SERVER
+#define GHC_DNS_SERVER 0
+#endif
+
 
 // IMPL
 

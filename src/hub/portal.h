@@ -2,7 +2,7 @@
 #include "macro.hpp"
 
 namespace gyverhub::portal {
-#if GHI_MOD_ENABLED(GH_MOD_PORTAL)
+#if GHC_PORTAL == GHC_PORTAL_BUILTIN
     extern const uint8_t index[] PROGMEM;
     extern const size_t index_size;
     extern const uint8_t script[] PROGMEM;

@@ -34,11 +34,9 @@
 #endif
 #endif
 
-#if GHI_MOD_ENABLED(GH_MOD_DNS)
+#if GHC_DNS_SERVER
 #include <DNSServer.h>
 #endif
-
-#define GH__ENABLE_DNS ((GHI_MOD_ENABLED(GH_MOD_PORTAL) || (GHI_MOD_ENABLED(GH_MOD_FILE_PORTAL) && GHC_FS != GHC_FS_NONE)) && GHI_MOD_ENABLED(GH_MOD_DNS))
 
 class HubHTTP {
    public:
@@ -71,10 +69,10 @@ class HubHTTP {
 #endif
 
 // captive portal
-#if GH__ENABLE_DNS
+#if GHC_DNS_SERVER
             else {
                 gzip_h();
-#if GHI_MOD_ENABLED(GH_MOD_FILE_PORTAL) && GHC_FS != GHC_FS_NONE
+#if GHC_PORTAL == GHC_PORTAL_FS
                 File f = GHI_FS.open(F("/hub/index.html.gz"), "r");
                 if (f) server.streamFile(f, F("text/html"));
                 else server.send(404);
@@ -191,7 +189,7 @@ class HubHTTP {
 #endif
 
 // portal
-#if GHI_MOD_ENABLED(GH_MOD_FILE_PORTAL) && GHC_FS != GHC_FS_NONE
+#if GHC_PORTAL == GHC_PORTAL_FS
         server.on("/", [this]() {
             File f = GHI_FS.open(F("/hub/index.html.gz"), "r");
             if (f) server.streamFile(f, F("text/html"));
@@ -209,7 +207,7 @@ class HubHTTP {
             if (f) server.streamFile(f, F("text/css"));
             else server.send(404);
         });
-#elif GHI_MOD_ENABLED(GH_MOD_PORTAL)
+#elif GHC_PORTAL == GHC_PORTAL_BUILTIN
         server.on("/", [this]() {
             gzip_h();
             cache_h();
@@ -228,10 +226,9 @@ class HubHTTP {
 #endif
 
 // DNS for captive portal
-#if GH__ENABLE_DNS
+#if GHC_DNS_SERVER
         if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA) {
-            dns_f = 1;
-            dns.start(53, "*", WiFi.softAPIP());
+            dnsEnabled =  dns.start(53, "*", WiFi.softAPIP());
         }
 #endif
 
@@ -241,15 +238,15 @@ class HubHTTP {
 
     void endHTTP() {
         server.stop();
-#if GH__ENABLE_DNS
-        if (dns_f) dns.stop();
+#if GHC_DNS_SERVER
+        if (dnsEnabled) dns.stop();
 #endif
     }
 
     void tickHTTP() {
         server.handleClient();
-#if GH__ENABLE_DNS
-        if (dns_f) dns.processNextRequest();
+#if GHC_DNS_SERVER
+        if (dnsEnabled) dns.processNextRequest();
 #endif
     }
 
@@ -321,10 +318,9 @@ class HubHTTP {
     bool updating = false;
 #endif
 
-#if GH__ENABLE_DNS
-    bool dns_f = false;
+#if GHC_DNS_SERVER
+    bool dnsEnabled = false;
     DNSServer dns;
 #endif
 };
 
-#undef GH__ENABLE_DNS

@@ -47,6 +47,22 @@
 #define GHC_PUBLIC_PATH "/www"
 
 /**
+ * Использовать встроенный DNS сервер для captive portal.
+ * Игнорируется если GHC_PORTAL == GHC_PORTAL_NONE
+ */
+#define GHC_DNS_SERVER 1
+
+/**
+ * Встроенный клиент (портал).
+ * 
+ * Доступные значения:
+ * 1. GHC_PORTAL_NONE - Отключить.
+ * 2. GHC_PORTAL_BUILTIN - Встроенный клиент (по умолчанию).
+ * 3. GHC_PORTAL_FS - Клиент в файловой системе.
+ */
+#define GHC_PORTAL GHC_PORTAL_BUILTIN
+
+/**
  * Реализация всех протоклов.
  * 
  * Доступные значения:

@@ -372,12 +372,12 @@ protected:
 #endif
 
 
-#if GHI_MOD_ENABLED(GH_MOD_FILE_PORTAL) && GHC_FS != GHC_FS_NONE
+#if GHC_PORTAL == GHC_PORTAL_FS
         GH__SETH(HTTP_GET, "/favicon.svg", HubHTTP::handlerSendString, "");
         GH__SETH(HTTP_GET, "/", HubHTTP::handlerSendFile, "/hub/index.html.gz");
         GH__SETH(HTTP_GET, "/script.js", HubHTTP::handlerSendFile, "/hub/script.js.gz");
         GH__SETH(HTTP_GET, "/style.css", HubHTTP::handlerSendFile, "/hub/style.css.gz");
-#elif GHI_MOD_ENABLED(GH_MOD_PORTAL)
+#elif GHC_PORTAL == GHC_PORTAL_BUILTIN
         GH__SETH(HTTP_GET, "/favicon.svg", HubHTTP::handlerSendString, "");
         GH__SETH(HTTP_GET, "/", HubHTTP::handlerSendBinData, new String(gyverhub::portal::index, gyverhub::portal::index_size));
         GH__SETH(HTTP_GET, "/script.js", HubHTTP::handlerSendBinData, new String(gyverhub::portal::script, gyverhub::portal::script_size));
